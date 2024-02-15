@@ -16,7 +16,7 @@ def hello_publisher():
     # Main loop
     while not rospy.is_shutdown():
         # Publish the "hello" message on the 'hello_topic'
-        hello_msg = "Hello, ROS!"
+        hello_msg = "Wassup, ROS!"
         rospy.loginfo(hello_msg)
         pub.publish(hello_msg)
 
