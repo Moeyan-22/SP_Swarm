@@ -1,0 +1,8 @@
+<launch>
+    <!-- Start the ROS core -->
+    <node name="roscore" pkg="ros" type="core" output="screen"/>
+
+    <!-- Launch the hello_publisher node -->
+    <node name="hello_publisher_node" pkg="drone_swarm" type="testing.py" output="screen"/>
+</launch>
+
