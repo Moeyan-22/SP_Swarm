@@ -30,7 +30,7 @@ class DroneNode:
     
     """
 
-    def __init__(self,):
+    def __init__(self):
 
 
         rospy.init_node('drone', anonymous=True)
