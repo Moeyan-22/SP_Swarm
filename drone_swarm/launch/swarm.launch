@@ -1,0 +1,7 @@
+<launch>
+  <node name="drone_node" pkg="your_package_name" type="drone_node.py" output="screen">
+    <param name="~drone_ip" value="192.168.0.101"/>
+    <param name="~drone_port" value="8889"/>
+    <param name="~local_port" value="9010"/>
+  </node>
+</launch>
