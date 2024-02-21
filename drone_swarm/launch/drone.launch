@@ -1,0 +1,24 @@
+<launch>
+
+  <!-- Start the ROS core -->
+  <node name="roscore" pkg="ros" type="core" output="log"/>
+
+  <!-- Start the tello_driver -->
+  <node name="drone_node" pkg="drone_swarm" type="tello_driver.py" output="screen">
+    <param name="~name" value="$(arg tello)"/>
+    <param name="~id" value="$(arg id)"/>
+    <param name="~drone_ip" value="$(arg drone_ip)"/>
+    <param name="~local_port" value="$(arg local_port)"/>
+  </node>
+
+
+  <!-- Start the tello_controller -->
+  <node name="drone_controller_node" pkg="drone_swarm" type="tello_controller.py" output="screen">
+    <param name="~name" value="$(arg tello)"/>
+    <param name="~id" value="$(arg id)"/>
+    <param name="~group" value="$(arg group)"/>
+    <param name="~target" value="$(arg target)"/>
+  </node>
+
+
+</launch>
