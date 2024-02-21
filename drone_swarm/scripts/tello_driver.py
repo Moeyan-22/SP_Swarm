@@ -12,7 +12,7 @@ class DroneNode:
 
     """
     
-    Single Tello Edu Controller written by Moe
+    Single Tello Edu Driver written by Moeyan-22
 
     Containts Utility function for
      - executing command
@@ -27,6 +27,8 @@ class DroneNode:
      - drone ip
      - local port
     
+    *Note commads such as 'mid?' and 'takeoff' is sent through tello_controller
+
     
     """
 
@@ -45,6 +47,7 @@ class DroneNode:
         self.mpad = 0
         self.known_mpad = []
         self.rate = rospy.Rate(20)
+        self.rescue = False
 
         self.action_pub = rospy.Publisher('/{}/action'.format(self.ns), String, queue_size=10)
         self.mpad_pub = rospy.Publisher('mpad', Array, queue_size=10)
@@ -58,14 +61,23 @@ class DroneNode:
             rospy.logerr("Error sending message: " + str(e))
 
     def send_command(self, command = ''):
-        rospy.loginfo(f"Received command: {command.data}")
-        self.send(command.data)
-        self.action_pub.publish(command)
+        if self.rescue == False:
+            rospy.loginfo(f"executing command: {command.data}")
+            self.send(command.data)
+            self.action_pub.publish(command)
+        else:
+            self.rescue_action()
+
+    def rescue_action(self):
+        self.send('stop')
+        self.send('go 100 0 0 10 {}'.format(self.mpad))
 
     def check(self, message):
-        if message != 'ok' or message != 'error':
-            self.mpad = int(message)
-            self.update_mpad
+        if message != 'ok' and message != 'error':
+            self.mpad = message.find('mpad:')
+            if self.mpad != -1:
+                self.mpad = int(message[self.mpad + 5])
+ 
 
     def receive_command(self):
         while not rospy.is_shutdown():
@@ -79,17 +91,64 @@ class DroneNode:
         self.known_mpad = data
 
     def update_mpad(self):
-        for mpad in self.known_mpad:
-            if self.mpad != -1:
-                if self.mpad != mpad:
-                    self.known_mpad.append(self.mpad)
+        while not rospy.is_shutdown():
+            for mpad in self.known_mpad:
+                if self.mpad != -1:
+                    self.check_mpad(mpad)
+                else:
+                    pass
+
+            self.rate.sleep()
+
+    def check_mpad(self, mpad):
+
+        special = False
+        rescured = False
+
+        if self.mpad != mpad:
+            self.rescue = True
+            self.known_mpad.append(self.mpad)
             self.mpad_pub.publish(self.known_mpad)
+        elif self.mpad == mpad:
+            special = self.check_special(mpad)
+            if special == False:
+                pass
+            elif special == True:
+                rescured = self.check_rescured(mpad)
+                if rescured == False:
+                    self.rescue = True
+                    self.known_mpad.append(self.mpad)
+                    self.mpad_pub.publish(self.known_mpad)
+                elif rescured == True:
+                    pass
+    
+
+    def check_special(self, mpad):
+        if (mpad % 2 == 0) :
+            return True
+        else:
+            return False
+        
+    def check_rescured(self, mpad):
+
+        count = 0
+
+        count = self.known_mpad.count(mpad)
+        if count == 1:
+            return False
+        elif count == 2:
+            return True
+        else:
+            rospy.logerr("Unexpected count value: {}".format(count))
+            return False        
 
 
     def start(self):
         # Start the receive_response thread
         response_thread = threading.Thread(target=self.receive_response)
         response_thread.start()
+
+        self.update_mpad
 
         # Spin until the node is shut down
         rospy.spin()
@@ -100,3 +159,5 @@ if __name__ == '__main__':
         drone.start()
     except rospy.ROSInterruptException:
         rospy.logerr("ROS node interrupted.")
+    except Exception as e:
+        rospy.logerr("Error at Tello driver: {}".format(e))
