@@ -3,6 +3,7 @@
 import rospy
 import queue
 import numpy as np
+import json
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
@@ -37,9 +38,11 @@ class DroneController:
         self.cmd_queue = queue.Queue()
 
         self.name = rospy.get_param('~name', 'tello')
-        self.id = rospy.get_param('~id', 0)
+        self.id = int(rospy.get_param('~id', 1))
         self.group = rospy.get_param('~group', 'A')
-        self.target_raw = rospy.get_param('~target', [])
+        self.target_raw_string = rospy.get_param('~target', '[]')
+        self.target_raw = json.loads(self.target_raw_string)
+
         self.target = []
         self.takeoff = 0
         self.started = False
@@ -79,8 +82,8 @@ class DroneController:
         i = 0
         cycles = self.target_raw[0]
         while i < cycles:
-            self.target[(i)][0] = self.target_raw[(i + 1)*2-1]
-            self.target[(i)][1] = self.target_raw[(i + 1)*2]
+            self.target[i][0] = self.target_raw[(i + 1)*2-1]
+            self.target[i][1] = self.target_raw[(i + 1)*2]
             i += 1
         self.positioning()
         
