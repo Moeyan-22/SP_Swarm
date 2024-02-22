@@ -4,14 +4,11 @@ import rospy
 import subprocess
 import roslaunch
 import numpy as np
+import json
 from drone_swarm.msg import Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
-
-
-import socket
-import threading
 
 class SwarmDriver:
 
@@ -90,25 +87,29 @@ class SwarmDriver:
         launch_files = []
         cli_args = []
 
-        for num in range(self.drone_num):
+        for num in range(self.drone_num): #only applicable till 9 drones
 
             cli_args = ['drone_swarm',
                         launch_file,
-                        
-            ]
-
-
-
-
-
+                        '~name:=tello{}'.format(num),
+                        '~id:={}'.format(num),
+                        '~drone_ip:=192.168.0.10{}'.format(num + 1),
+                        '~local_port:=901{}'.format(num),
+                        '~group:={}'.format(self.group),
+                        '~target:={}'.format(self.pass_processed_rosbag_data()),                        
+                        ]
             
+            roslaunch_args = cli_args[2:]
+            roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
+            
+            launch_files=[(roslaunch_file, roslaunch_args)]
 
+            parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
 
-
-
-
-
-
+            parent.start()
+            
+    def pass_processed_rosbag_data(self):
+        return json.dumps(self.sliced_data)
 
     def start(self):
         pass

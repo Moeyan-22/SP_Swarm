@@ -38,7 +38,7 @@ class DroneController:
         self.cmd_queue = queue.Queue()
 
         self.name = rospy.get_param('~name', 'tello')
-        self.id = int(rospy.get_param('~id', 1))
+        self.id = int(rospy.get_param('~id', 0))
         self.group = rospy.get_param('~group', 'A')
         self.target_raw_string = rospy.get_param('~target', '[]')
         self.target_raw = json.loads(self.target_raw_string)
