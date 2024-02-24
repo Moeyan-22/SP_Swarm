@@ -1,8 +1,9 @@
 #! /usr/bin/env python3
 
 import rospy
-from std_msgs.msg import Int32
 import roslaunch
+import time
+from std_msgs.msg import Int32
 
 class SwarmController:
 
@@ -13,10 +14,11 @@ class SwarmController:
         self.rosbag_id_1 = rospy.get_param('~rosbag_id', 0)
         self.rosbag_id_2 = rospy.get_param('~rosbag_id', 0)
 
+        self.rosbag_ids = [self.rosbag_id_1, self.rosbag_id_2]
         self.groups = ['A','B']
         self.drone_in_groups = [5,5]
 
-        self.takeoff_pub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
+        self.takeoff_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
 
     def launcher(self):
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -27,16 +29,13 @@ class SwarmController:
         launch_files = []
         cli_args = []
 
-        for num in range(self.groups): #only applicable till 9 drones
+        for num in range(len(self.groups)): #only applicable till 9 drones
 
             cli_args = ['drone_swarm',
                         launch_file,
-                        '~name:=tello{}'.format(num),
-                        '~id:={}'.format(num),
-                        '~drone_ip:=192.168.0.10{}'.format(num + 1),
-                        '~local_port:=901{}'.format(num),
-                        '~group:={}'.format(self.group),
-                        '~target:={}'.format(self.pass_processed_rosbag_data()),                        
+                        '~group:={}'.format(str(self.groups[num])),
+                        '~drone_num:={}'.format(int(self.drone_in_groups[num])),
+                        '~rosbag_id:={}'.format(int(self.rosbag_ids[num])),                      
                         ]
             
             roslaunch_args = cli_args[2:]
@@ -48,7 +47,16 @@ class SwarmController:
 
             parent.start()
 
+    def takeoff_commander(self):
+        self.takeoff = 1
+        while not rospy.is_shutdown():
+            self.takeoff_pub.publish(self.takeoff)
 
+
+    def start(self):
+        self.launcher(self)
+        time.sleep(5)
+        self.takeoff_commander
 
 if __name__ == '__main__':
     try:
