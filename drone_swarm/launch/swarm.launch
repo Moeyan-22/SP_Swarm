@@ -1,0 +1,14 @@
+<launch>
+  <arg name="name" default="tello" />
+  <arg name="id" default="1" />
+  <arg name="id" default="1" />
+
+
+    <!-- Start the swarm_driver -->
+    <node name="swarm_driver_node" pkg="drone_swarm" type="swarm_driver.py" output="screen">
+      <param name="~group" value="$(arg name)"/>
+      <param name="~drone_num" value="$(arg id)"/>
+      <param name="~rosbag_id" value="$(arg drone_ip)"/>
+    </node>
+
+</launch>

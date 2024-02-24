@@ -112,7 +112,8 @@ class SwarmDriver:
         return json.dumps(self.sliced_data)
 
     def start(self):
-        pass
+        self.get_rosbag()
+        self.pass_launch_args()
 
 if __name__ == '__main__':
     try:
@@ -121,4 +122,4 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.logerr("ROS node interrupted.")
     except Exception as e:
-        rospy.logerr("Error at Tello controller: {}".format(e))
+        rospy.logerr("Error at Swarm driver: {}".format(e))
