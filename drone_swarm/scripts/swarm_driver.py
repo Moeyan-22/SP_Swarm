@@ -51,7 +51,7 @@ class SwarmDriver:
 
 
     def get_rosbag(self):
-        self.bag_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/rosbag_{}".format(self.rosbag_id)
+        self.bag_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/rosbag{}".format(self.rosbag_id)
         try:
             command = ['rosbag', 'play', self.bag_file_path]
             process = subprocess.Popen(command)
