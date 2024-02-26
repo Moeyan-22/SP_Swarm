@@ -38,9 +38,10 @@ class DroneNode:
         rospy.init_node('drone', anonymous=True)
         
         self.name = rospy.get_param('~name', 'tello')
-        self.id = rospy.get_param('~id', 0)
+        self.id = rospy.get_param('~id', 2)
         self.drone_ip = rospy.get_param('~drone_ip', '192.168.0.101')
         self.local_port = rospy.get_param('~local_port', 9010)
+        self.ns = self.name + str(self.id)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', self.local_port))
@@ -146,7 +147,7 @@ class DroneNode:
 
     def start(self):
         # Start the receive_response thread
-        response_thread = threading.Thread(target=self.receive_response)
+        response_thread = threading.Thread(target=self.receive_command())
         response_thread.start()
 
         self.update_mpad
