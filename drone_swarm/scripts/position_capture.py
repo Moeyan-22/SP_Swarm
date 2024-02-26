@@ -16,7 +16,7 @@ class PositionCapture:
         rospy.init_node('position_capture', anonymous=True)
 
         self.version = 0
-        self.status = 0
+        self.status = "notrecording"
         self.version_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/version.txt"
         self.rate = rospy.Rate(10)
 
@@ -38,32 +38,30 @@ class PositionCapture:
         return new_version
 
     def command_capture(self): 
-        self.version = self.check_version()
         image_height, image_width = 200, 200
         blank_image = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
         cv2.imshow('Keyboard Input Window', blank_image)
 
         while not rospy.is_shutdown():
+            self.version = self.check_version()
             cv2.putText(blank_image, str(self.version), (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2, cv2.LINE_AA)
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord('r'):  
-                if self.status == 0:
+                if self.status == "notrecording":
                     print("hello")
                     rospy.loginfo('Recording started for rosbag:{}')
                     self.start_rosbag()
                     blank_image[:, :] = [0, 255, 0]
-                    self.status = 1
-                elif self.status == 2:
-                    self.version = self.update_version()
-                    self.status = 0
+                    self.status = "recording"
 
             elif key == ord('s'): 
                 rospy.loginfo('Recording stopped for rosbag:{}')
                 self.stop_rosbag()
                 blank_image[:, :] = [0, 0, 255]
-                self.status = 2
+                self.status = "notrecording"
+                self.update_version()
 
             elif key == ord('q'):
                 rospy.signal_shutdown('User pressed "q" key')
