@@ -89,9 +89,6 @@ class TurtleSim:
         self.start_action()
         self.root.mainloop()
 
-
-
-
 if __name__ == '__main__':
     try:
         turtle_sim = TurtleSim()

@@ -25,7 +25,7 @@ class PositionCapture:
             with open(self.version_file_path, 'r') as file:
                 version = int(file.read())
                 return version
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             rospy.logerr("Error at retriving version: {}".format(e))
             return 0
 
@@ -39,7 +39,7 @@ class PositionCapture:
 
     def command_capture(self): 
         self.version = self.check_version()
-        image_height, image_width = 500, 500
+        image_height, image_width = 200, 200
         blank_image = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
         cv2.imshow('Keyboard Input Window', blank_image)
@@ -79,7 +79,7 @@ class PositionCapture:
             os.makedirs(self.rosbag_path)
 
         try:
-            self.rosbag_process = subprocess.Popen(['rosbag', 'record', '-o', self.rosbag_path, '/simulated_uwb_1'])
+            self.rosbag_process = subprocess.Popen(['rosbag', 'record', '-o', self.rosbag_path, 'mouse_pose'])
             rospy.loginfo('ROS bag recording started.')
         except Exception as e:
             rospy.logerr('Error starting ROS bag recording: {}'.format(str(e)))
