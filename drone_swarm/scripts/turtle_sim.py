@@ -21,9 +21,9 @@ class TurtleSim:
         self.threads = []
         self.total_turtle = 3 #change this to how many drone
         self.turtle_starting_position = [ #change for the position of the drone
+            [-100,0],
             [0,0],
-            [100,0],
-            [-100,0]
+            [100,0]
         ]
         
         self.root = tk.Tk()
@@ -47,7 +47,7 @@ class TurtleSim:
             self.start_turtle(i)
 
     def start_turtle(self, i):
-        turtle_action_subscriber = rospy.Subscriber('/{}/action'.format('tello' + str(i)), String, lambda data: self.get_action(data, i), callback_args=i, queue_size=10)
+        turtle_action_subscriber = rospy.Subscriber('/{}/action'.format('tello' + str(i)), String, lambda data, i: self.get_action(data, i), callback_args=i, queue_size=10)
         self.turtle_subscribers.append(turtle_action_subscriber)
     
     def get_action(self, data, i):
@@ -61,7 +61,6 @@ class TurtleSim:
 
     def execute_action(self, i):
         while not rospy.is_shutdown():
-
             self.turtles[i].x = 0
             self.turtles[i].y = 0
             rate = rospy.Rate(20)
