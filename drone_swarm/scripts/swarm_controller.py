@@ -7,6 +7,18 @@ from std_msgs.msg import Int32
 
 class SwarmController:
 
+    """
+    
+    
+    
+    tested takeoff in sim with test_drone.launch
+    
+    
+    
+    """
+
+    
+
     def __init__(self):
         
         rospy.init_node('Swarm Controller', anonymous=True)
