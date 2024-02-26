@@ -6,9 +6,12 @@ from geometry_msgs.msg import Pose
 from std_msgs.msg import String
 import tkinter as tk
 from turtle import RawTurtle, ScrolledCanvas
+from geometry_msgs.msg import Pose, Point, Quaternion
 
 
-class TurtleSwarm:
+
+
+class TurtleSim:
 
     def __init__(self):
 
@@ -16,21 +19,23 @@ class TurtleSwarm:
         self.turtles = []
         self.turtle_subscribers = []
         self.threads = []
-        self.total_turtle = 1
-        self.turtle_starting_position = [
-            [0,0]
+        self.total_turtle = 3 #change this to how many drone
+        self.turtle_starting_position = [ #change for the position of the drone
+            [0,0],
+            [100,0],
+            [-100,0]
         ]
         
         self.root = tk.Tk()
         self.root.title('Turtle Controller')
         self.canvas = ScrolledCanvas(self.root)
         self.canvas.pack()
-        self.create_turtle_objects()
         self.canvas.bind("<Motion>", self.mouse_motion_callback)
         self.mouse_pos_pub = rospy.Publisher('mouse_pose', Pose, queue_size=10)
 
     def create_turtle_objects(self):
-        for i in range(len(self.total_turtle)):
+        for i in range(self.total_turtle):
+            print(f"i have ran {i} times")
             turtle = RawTurtle(self.canvas)
             turtle.speed(2)
             turtle.shape("circle")
@@ -38,11 +43,11 @@ class TurtleSwarm:
             turtle.penup()
             turtle.goto(self.turtle_starting_position[i][0], self.turtle_starting_position[i][1])
             turtle.pendown()
+            turtle.action = ''
             self.turtles.append(turtle)
             self.start_turtle(i)
 
     def start_turtle(self, i):
-        (self.turtles[i]).action = None
         turtle_action_subscriber = rospy.Subscriber('/{}/action'.format('tello' + str(i)), String, lambda data: self.get_action(data, i), callback_args=i, queue_size=10)
         self.turtle_subscribers.append(turtle_action_subscriber)
     
@@ -58,8 +63,8 @@ class TurtleSwarm:
     def execute_action(self, i):
         while not rospy.is_shutdown():
 
-            (self.turtles[i]).x = 0
-            (self.turtles[i]).y = 0
+            self.turtles[i].x = 0
+            self.turtles[i].y = 0
             rate = rospy.Rate(20)
 
             command_received = (self.turtles[i]).action
@@ -69,17 +74,17 @@ class TurtleSwarm:
                 self.turtles[i].fillcolor("green")            
             elif "rc" in command_received:
                 numbers = [int(s) for s in command_received.split() if s.isdigit()]
-                (self.turtles[i]).x = numbers[0]
-                (self.turtles[i]).y = numbers[1]
+                self.turtles[i].x = numbers[0]
+                self.turtles[i].y = numbers[1]
 
-            (self.turtles[i]).forward((self.turtles[i]).x)
-            (self.turtles[i]).right((self.turtles[i]).y)
+            self.turtles[i].forward(self.turtles[i].x)
+            self.turtles[i].right(self.turtles[i].y)
 
             rate.sleep()
 
     def mouse_motion_callback(self, event):
-        pose_msg = Pose(x=event.x, y=self.canvas.winfo_reqheight() - event.y, theta=0.0)
-        self.mouse_pos.publish(pose_msg)
+        pose_msg = Pose(position=Point(x=event.x, y=self.canvas.winfo_reqheight() - event.y, z=0.0), orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))
+        self.mouse_pos_pub.publish(pose_msg)
 
     def start(self):
         self.create_turtle_objects()
@@ -91,7 +96,8 @@ class TurtleSwarm:
 
 if __name__ == '__main__':
     try:
-        pass
+        turtle_sim = TurtleSim()
+        turtle_sim.start()
     except rospy.ROSInterruptException:
         rospy.logerr("ROS node interrupted.")
     except Exception as e:
