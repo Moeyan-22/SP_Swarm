@@ -33,7 +33,7 @@ class SwarmDriver:
 
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Int32, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
-        self.rosbag_sub = rospy.Subscriber('/{}/rosbag'.format(self.rosbag_id), Point, self.get_rosbag_data, queue_size=10)
+        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Point, self.get_rosbag_data, queue_size=10)
 
 
 

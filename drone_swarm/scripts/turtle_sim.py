@@ -61,24 +61,21 @@ class TurtleSim:
             thread.start()
 
     def execute_action(self, i):
+        print(self.turtles[i].xcor())
         while not rospy.is_shutdown():
-            self.turtles[i].x = 0
-            self.turtles[i].y = 0
             rate = rospy.Rate(20)
 
             command_received = (self.turtles[i]).action
             if command_received == "command":
                 self.turtles[i].fillcolor("red")
             elif command_received == "takeoff":
-                self.turtles[i].fillcolor("green")            
+                self.turtles[i].fillcolor("green")
             elif "rc" in command_received:
                 numbers = [int(s) for s in command_received.split() if s.isdigit()]
-                self.turtles[i].x = numbers[0]
-                self.turtles[i].y = numbers[1]
-
-            self.turtles[i].forward(self.turtles[i].x)
-            self.turtles[i].right(self.turtles[i].y)
-
+                x_offset = numbers[0]
+                y_offset = numbers[1]
+                # Move forward and right independently
+                self.turtles[i].goto((self.turtles[i]).xcor() + y_offset, (self.turtles[i]).ycor() + x_offset)  # Move right by 20 pixels
             rate.sleep()
 
     def mouse_motion_callback(self, event):
