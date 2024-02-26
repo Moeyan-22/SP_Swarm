@@ -38,9 +38,10 @@ class DroneNode:
         rospy.init_node('drone', anonymous=True)
         
         self.name = rospy.get_param('~name', 'tello')
-        self.id = rospy.get_param('~id', 0)
+        self.id = rospy.get_param('~id', 2)
         self.drone_ip = rospy.get_param('~drone_ip', '192.168.0.101')
         self.local_port = rospy.get_param('~local_port', 9010)
+        self.ns = self.name + str(self.id)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', self.local_port))
@@ -50,10 +51,10 @@ class DroneNode:
         self.rate = rospy.Rate(20)
         self.rescue = False
 
-        self.action_pub = rospy.Publisher('/{}/action'.format(self.name), String, queue_size=10)
+        self.action_pub = rospy.Publisher('/{}/action'.format(self.ns), String, queue_size=10)
         self.mpad_pub = rospy.Publisher('mpad', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('mpad', Array, self.get_mpad, queue_size=10)
-        self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
+        self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.ns), String, self.send_command, queue_size=10)
 
     def send(self, message = ''):
         try:
