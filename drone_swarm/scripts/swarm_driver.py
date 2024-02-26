@@ -5,7 +5,7 @@ import subprocess
 import roslaunch
 import numpy as np
 import json
-from drone_swarm.msg import Array
+from msg import Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
