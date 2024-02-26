@@ -2,7 +2,7 @@
 
 import rospy
 from std_msgs.msg import String
-from msg import Array
+from drone_swarm.msg import Array
 
 
 import socket
