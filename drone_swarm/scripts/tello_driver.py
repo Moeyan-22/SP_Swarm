@@ -50,10 +50,10 @@ class DroneNode:
         self.rate = rospy.Rate(20)
         self.rescue = False
 
-        self.action_pub = rospy.Publisher('/{}/action'.format(self.ns), String, queue_size=10)
+        self.action_pub = rospy.Publisher('/{}/action'.format(self.name), String, queue_size=10)
         self.mpad_pub = rospy.Publisher('mpad', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('mpad', Array, self.get_mpad, queue_size=10)
-        self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.ns), String, self.send_command, queue_size=10)
+        self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
 
     def send(self, message = ''):
         try:
@@ -146,7 +146,7 @@ class DroneNode:
 
     def start(self):
         # Start the receive_response thread
-        response_thread = threading.Thread(target=self.receive_response)
+        response_thread = threading.Thread(target=self.receive_command())
         response_thread.start()
 
         self.update_mpad
