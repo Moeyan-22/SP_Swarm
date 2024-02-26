@@ -22,7 +22,7 @@ class PositionCapture:
 
     def check_version(self):
         try:
-            with open(self.file_path, 'r') as file:
+            with open(self.version_file_path, 'r') as file:
                 version = int(file.read())
                 return version
         except FileNotFoundError:
@@ -33,24 +33,25 @@ class PositionCapture:
         current_version = self.check_version()
         new_version = current_version + 1
 
-        with open(self.file_path, 'w') as file:
+        with open(self.version_file_path, 'w') as file:
             file.write(str(new_version))
         return new_version
 
     def command_capture(self): 
         self.version = self.check_version()
-        image_height, image_width = 100, 100
+        image_height, image_width = 500, 500
         blank_image = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
         cv2.imshow('Keyboard Input Window', blank_image)
 
         while not rospy.is_shutdown():
-            cv2.putText(blank_image, self.version, (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(blank_image, str(self.version), (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2, cv2.LINE_AA)
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord('r'):  
                 if self.status == 0:
-                    rospy.loginfo('Recording started for rosbag:{}').format(self.version)
+                    print("hello")
+                    rospy.loginfo('Recording started for rosbag:{}')
                     self.start_rosbag()
                     blank_image[:, :] = [0, 255, 0]
                     self.status = 1
@@ -59,7 +60,7 @@ class PositionCapture:
                     self.status = 0
 
             elif key == ord('s'): 
-                rospy.loginfo('Recording stopped for rosbag:{}').format(self.version)
+                rospy.loginfo('Recording stopped for rosbag:{}')
                 self.stop_rosbag()
                 blank_image[:, :] = [0, 0, 255]
                 self.status = 2
@@ -67,7 +68,7 @@ class PositionCapture:
             elif key == ord('q'):
                 rospy.signal_shutdown('User pressed "q" key')
 
-            cv2.imshow('Input Window', blank_image)
+            cv2.imshow('Keyboard Input Window', blank_image)
             self.rate.sleep()
 
         

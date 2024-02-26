@@ -35,7 +35,6 @@ class TurtleSim:
 
     def create_turtle_objects(self):
         for i in range(self.total_turtle):
-            print(f"i have ran {i} times")
             turtle = RawTurtle(self.canvas)
             turtle.speed(2)
             turtle.shape("circle")
