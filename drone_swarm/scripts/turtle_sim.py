@@ -82,6 +82,8 @@ class TurtleSwarm:
         self.mouse_pos.publish(pose_msg)
 
     def start(self):
+        self.create_turtle_objects()
+        self.start_action()
         self.root.mainloop()
 
 

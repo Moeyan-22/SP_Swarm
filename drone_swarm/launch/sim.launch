@@ -1,0 +1,7 @@
+<launch>
+    <!-- Start the ROS core -->
+    <node name="roscore" pkg="ros" type="core" output="screen"/>
+
+    <!-- Launch the hello_publisher node -->
+    <node name="sim_node" pkg="drone_swarm" type="turtle_sim.py" output="screen"/>
+</launch>
