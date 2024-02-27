@@ -4,6 +4,8 @@ import rospy
 import roslaunch
 import time
 from std_msgs.msg import Int32
+import threading
+
 
 class SwarmController:
 
@@ -19,12 +21,14 @@ class SwarmController:
         self.groups = ['A','B']
         self.drone_in_groups = [5,5]
 
-        self.takeoff_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
+        self.takeoff_pub_A = rospy.Publisher('/A/takeoff_command',Int32, queue_size=10)
+        self.takeoff_pub_B = rospy.Publisher('/B/takeoff_command', Int32, queue_size=10)
 
-    def launcher(self):
+
+    def launcher(self, agr1):
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
-
+    
         
         launch_file = "swarm.launch"
         launch_files = []
@@ -48,17 +52,25 @@ class SwarmController:
 
             parent.start()
 
-    def takeoff_commander(self):
-        self.takeoff = 1
+    def takeoff_A(self):   
         while not rospy.is_shutdown():
-            self.takeoff_pub.publish(self.takeoff)
+            self.takeoff_pub_A.publish(1)
 
+    def takeoff_B(self):
+        while not rospy.is_shutdown():
+            self.takeoff_pub_B.publish(1)
 
     def start(self):
+        thread_A = threading.Thread(target=self.takeoff_A)
+        thread_B = threading.Thread(target=self.takeoff_B)
         self.launcher(self)
-        time.sleep(5)
-        self.takeoff_commander
-
+        time.sleep(10) # timing for launch for A
+        thread_A.start()
+        time.sleep(10) # timing for launch for B
+        thread_B.start()
+        thread_A.join()
+        thread_B.join()
+        
 if __name__ == '__main__':
     try:
         Swarm_controller = SwarmController()

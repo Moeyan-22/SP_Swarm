@@ -5,10 +5,9 @@ import subprocess
 import roslaunch
 import numpy as np
 import json
-from msg import Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Pose
 
 class SwarmDriver:
 
@@ -33,7 +32,7 @@ class SwarmDriver:
 
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Int32, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
-        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Point, self.get_rosbag_data, queue_size=10)
+        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
 
 
 
@@ -86,9 +85,9 @@ class SwarmDriver:
         launch_file = "drone.launch"
         launch_files = []
         cli_args = []
-
+        print(self.drone_num)
         for num in range(self.drone_num): #only applicable till 9 drones
-
+            print(self.drone_num)
             cli_args = ['drone_swarm',
                         launch_file,
                         '~name:=tello{}'.format(num),
@@ -109,7 +108,9 @@ class SwarmDriver:
             parent.start()
             
     def pass_processed_rosbag_data(self):
-        return json.dumps(self.sliced_data)
+        rosbag_data = self.sliced_data.tolist()
+        rosbag_data = json.dumps(rosbag_data)
+        return json.dumps(rosbag_data)
 
     def start(self):
         self.get_rosbag()
