@@ -7,7 +7,8 @@ import shutil
 import subprocess
 import signal
 import numpy as np
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Pose, Point, Quaternion
+
 
 
 class PositionCapture:
@@ -19,7 +20,12 @@ class PositionCapture:
         self.version = 0
         self.status = "notrecording"
         self.version_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/version.txt"
+        self.mouse_subscriber = rospy.Subscriber('/mouse_pose', Pose, lambda data: self.get_mouse_pos(data), queue_size=10)
+        self.mouse_pos_pub_id = rospy.Publisher('/{}/mouse_pose'.format(self.version), Pose ,queue_size=10)
         self.rate = rospy.Rate(10)
+
+    def get_mouse_pos(self, data):
+        self.mouse_pos_pub_id.publish(data)
 
     def check_version(self):
         try:
@@ -78,13 +84,13 @@ class PositionCapture:
             os.makedirs(self.rosbag_path)
 
         try:
-            self.rosbag_process = subprocess.Popen(['rosbag', 'record', '-o', self.rosbag_path, 'mouse_pose'])
+            self.rosbag_process = subprocess.Popen(['rosbag', 'record', '-o', self.rosbag_path, '/{}/mouse_pose'.format(self.version)])
             rospy.loginfo('ROS bag recording started.')
         except Exception as e:
             rospy.logerr('Error starting ROS bag recording: {}'.format(str(e)))
 
 
-    def stop_rosbag(self):
+    def stop_rosbag(self):  
         try:
             if self.rosbag_process:
                 self.rosbag_process.send_signal(signal.SIGINT)

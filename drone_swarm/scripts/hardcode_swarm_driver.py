@@ -26,7 +26,7 @@ class SwarmDriver:
         self.sequence_rate = rospy.Rate(1/self.sequence_delay)
         self.bag_file_path = ""
         self.rosbag_iteration = 0
-        self.rosbag_data = np.array([])
+        self.rosbag_data = np.array([0,0])
         self.sliced_data = []
         self.slicing_rate = 10
         self.uuid = ""
@@ -94,6 +94,8 @@ class SwarmDriver:
             parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
 
             parent.start()
+
+            print("spawned one")
             
     def pass_processed_rosbag_data(self):
         hardcoded_instructions = [
