@@ -77,34 +77,30 @@ class SwarmDriver:
 
 
     def pass_launch_args(self):
-
-        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        roslaunch.configure_logging(uuid)
-
-        
         launch_file = "drone.launch"
-        launch_files = []
-        cli_args = []
-        print(self.drone_num)
-        for num in range(self.drone_num): #only applicable till 9 drones
-            print(self.drone_num)
+        parents = []
+
+        for num in range(self.drone_num):
+            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+            roslaunch.configure_logging(uuid)
             cli_args = ['drone_swarm',
                         launch_file,
-                        '~name:=tello{}'.format(num),
-                        '~id:={}'.format(num),
-                        '~drone_ip:=192.168.0.10{}'.format(num + 1),
-                        '~local_port:=901{}'.format(num),
-                        '~group:={}'.format(self.group),
-                        '~target:={}'.format(self.pass_processed_rosbag_data()),                        
+                        'name:=tello{}'.format(num),
+                        'id:={}'.format(num),
+                        'drone_ip:=192.168.0.10{}'.format(num + 1),
+                        'local_port:=901{}'.format(num),
+                        'group:={}'.format(self.group),
+                        'target:={}'.format(self.pass_processed_rosbag_data()),                        
                         ]
             
             roslaunch_args = cli_args[2:]
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
-            
             launch_files=[(roslaunch_file, roslaunch_args)]
-
             parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
+            parents.append(parent)
+            print(parents)
 
+        for parent in parents:
             parent.start()
             
     def pass_processed_rosbag_data(self):

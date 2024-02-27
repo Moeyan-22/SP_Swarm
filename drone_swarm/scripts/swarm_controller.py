@@ -35,14 +35,22 @@ class SwarmController:
         cli_args = []
 
         for num in range(len(self.groups)): #only applicable till 9 drones
-
-            cli_args = ['drone_swarm',
+            if num/2 == 0 or num == 0:
+                cli_args = ['drone_swarm',
                         launch_file,
-                        '~group:={}'.format(str(self.groups[num])),
-                        '~drone_num:={}'.format(int(self.drone_in_groups[num])),
-                        '~rosbag_id:={}'.format(int(self.rosbag_ids[num])),                      
+                        '~group:={}'.format(str(self.groups[0])),
+                        '~drone_num:={}'.format(int(self.drone_in_groups[0])),
+                        '~rosbag_id:={}'.format(int(self.rosbag_ids[0])),                      
                         ]
+            else:
+                cli_args = ['drone_swarm',
+                            launch_file,
+                            '~group:={}'.format(str(self.groups[1])),
+                            '~drone_num:={}'.format(int(self.drone_in_groups[1])),
+                            '~rosbag_id:={}'.format(int(self.rosbag_ids[1])),                      
+                            ]
             
+            print(cli_args)
             roslaunch_args = cli_args[2:]
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
             
@@ -50,7 +58,7 @@ class SwarmController:
 
             parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
 
-            parent.start()
+            # parent.start()
 
     def takeoff_A(self):   
         while not rospy.is_shutdown():
