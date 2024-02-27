@@ -16,17 +16,11 @@
     </node>
 
     <!-- Start the tello_controller -->
-    <node name="drone_controller_node" pkg="drone_swarm" type="tello_controller.py" output="screen">
+    <node name="drone_controller_node" pkg="drone_swarm" type="hardcode_tello_controller.py" output="screen">
       <param name="~name" value="$(arg name)"/>
       <param name="~id" value="$(arg id)"/>
       <param name="~group" value="$(arg group)"/>
       <param name="~target" value="$(arg target)"/>
-    </node>
-
-    <node name="sim_node" pkg="drone_swarm" type="turtle_sim.py" output="screen">
-    </node>
-
-    <node name="test_node" pkg="drone_swarm" type="test_drone_launch.py" output="screen">
     </node>
 
   </group>
