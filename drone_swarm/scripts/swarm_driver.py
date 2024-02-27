@@ -24,7 +24,7 @@ class SwarmDriver:
         self.sequence_rate = rospy.Rate(1/self.sequence_delay)
         self.bag_file_path = ""
         self.rosbag_iteration = 0
-        self.rosbag_data = np.array([])
+        self.rosbag_data = np.array([0, 0])
         self.sliced_data = []
         self.slicing_rate = 10
         self.uuid = ""
@@ -83,22 +83,33 @@ class SwarmDriver:
         for num in range(self.drone_num):
             uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
             roslaunch.configure_logging(uuid)
-            cli_args = ['drone_swarm',
-                        launch_file,
-                        'name:=tello{}'.format(num),
-                        'id:={}'.format(num),
-                        'drone_ip:=192.168.0.10{}'.format(num + 1),
-                        'local_port:=901{}'.format(num),
-                        'group:={}'.format(self.group),
-                        'target:={}'.format(self.pass_processed_rosbag_data()),                        
-                        ]
+            print(self.group + str(self.drone_num) + "|||||||||||||||||")
+            if self.group == "A":
+                cli_args = ['drone_swarm',
+                            launch_file,
+                            'name:=tello{}'.format(num + 1),
+                            'id:={}'.format(num + 1),
+                            'drone_ip:=192.168.0.10{}'.format(num + 1),
+                            'local_port:=901{}'.format(num + 1),
+                            'group:=A',
+                            'target:={}'.format(self.pass_processed_rosbag_data()),                        
+                            ]
+            else:
+                cli_args = ['drone_swarm',
+                launch_file,
+                'name:=tello{}'.format(num + 6),
+                'id:={}'.format(num + 6),
+                'drone_ip:=192.168.0.10{}'.format(num + 6),
+                'local_port:=901{}'.format(num + 6),
+                'group:=B',
+                'target:={}'.format(self.pass_processed_rosbag_data()),                        
+                ]
             
             roslaunch_args = cli_args[2:]
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
             launch_files=[(roslaunch_file, roslaunch_args)]
             parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
             parents.append(parent)
-            print(parents)
 
         for parent in parents:
             parent.start()
