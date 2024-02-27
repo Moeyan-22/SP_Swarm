@@ -3,6 +3,7 @@
 import rospy
 import cv2
 import os
+import shutil
 import subprocess
 import signal
 import numpy as np
@@ -89,6 +90,29 @@ class PositionCapture:
                 self.rosbag_process.send_signal(signal.SIGINT)
                 self.rosbag_process.wait()
                 rospy.loginfo('ROS bag recording stopped.')
+                rm_rosbag_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/rosbag{}".format(self.version)
+                edit_rosbag = "/home/swarm/catkin_ws/src/drone_swarm/rosbag"
+
+                if os.path.exists(rm_rosbag_path):
+                    shutil.rmtree(rm_rosbag_path)
+
+                for filename in os.listdir(edit_rosbag):
+                    if "rosbag" in filename:
+
+                        new_filename = "rosbag{}.bag".format(self.version)
+
+                        # Build the full paths for the old and new files
+                        old_path = os.path.join(edit_rosbag, filename)
+                        new_path = os.path.join(edit_rosbag, new_filename)
+
+                        # Rename the file
+                        try:
+                            os.rename(old_path, new_path)
+                        except Exception as e:
+                            print(f"Error renaming file {filename}: {str(e)}")
+
+
+
             else:
                 rospy.logwarn('No active ROS bag recording process to stop.')
         except subprocess.CalledProcessError as e:
