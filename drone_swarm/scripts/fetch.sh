@@ -5,6 +5,8 @@
 #   1. Make the file an executable using command "chmod +x ~/catkin_ws/src/drone_swarm/scripts/pull.sh"
 #   2. Run the file using command "bash ~/catkin_ws/src/drone_swarm/scripts/pull.sh"
 
+# Important to note that this script does NOT merge branches. That will have to be done manually
+
 # Navigate to the source directory
 cd ~/catkin_ws/src
 
