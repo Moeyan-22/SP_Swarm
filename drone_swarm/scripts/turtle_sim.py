@@ -16,13 +16,14 @@ class TurtleSim:
     def __init__(self):
 
         rospy.init_node('turtle_sim', anonymous=True)
+
+        self.total_turtle = rospy.get_param('~total_turtle', 1)
+        self.turtle_starting_position = [[0, 0] for _ in range(self.total_turtle)]
+        self.edit_turtle_starting_position()
         self.turtles = []
         self.turtle_subscribers = []
         self.threads = []
-        self.total_turtle = 1 #change this to how many drone
-        self.turtle_starting_position = [ #change for the position of the drone
-            [0,0]
-        ]
+
         
         self.root = tk.Tk()
         self.root.title('Turtle Controller')
@@ -30,6 +31,12 @@ class TurtleSim:
         self.canvas.pack()
         self.canvas.bind("<Motion>", self.mouse_motion_callback)
         self.mouse_pos_pub = rospy.Publisher('mouse_pose', Pose, queue_size=10)
+
+    def edit_turtle_starting_position(self):
+        for i in range(self.total_turtle):
+            self.turtle_starting_position[i][0] = 0 + i*100
+            self.turtle_starting_position[i][1] = 0
+
 
     def create_turtle_objects(self):
         for i in range(self.total_turtle):
@@ -58,7 +65,6 @@ class TurtleSim:
             thread.start()
 
     def execute_action(self, i):
-        print(self.turtles[i].xcor())
         while not rospy.is_shutdown():
             rate = rospy.Rate(20)
 
