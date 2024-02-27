@@ -11,8 +11,8 @@ class command:
     def sendcommand(self):
         rate = rospy.Rate(0.1) # 10hz
         while not rospy.is_shutdown():
-            pub = rospy.Publisher('/tello2/cmd', String, queue_size=10)
-            pub.publish("command")
+            pub = rospy.Publisher('/tello0/cmd', String, queue_size=10)
+            pub.publish("rc 10 10 0 0")
             rate.sleep()
 
 if __name__ == '__main__':
