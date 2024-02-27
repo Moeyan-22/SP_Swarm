@@ -42,6 +42,7 @@ class DroneNode:
         self.drone_ip = rospy.get_param('~drone_ip', '192.168.0.101')
         self.local_port = rospy.get_param('~local_port', 9010)
         self.ns = self.name + str(self.id)
+        print(self.ns)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', self.local_port))

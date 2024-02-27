@@ -11,6 +11,7 @@ from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
 import time
 
+
 class SwarmDriver:
 
     def __init__(self):
@@ -18,7 +19,7 @@ class SwarmDriver:
         rospy.init_node('swarm_driver', anonymous=True)
 
         self.group = rospy.get_param('~group', 'A')
-        self.drone_num = rospy.get_param('~drone_num', 2)
+        self.drone_num = rospy.get_param('~drone_num', 1)
         self.rosbag_id = rospy.get_param('~rosbag_id', 1)
 
         self.takeoff = 0
@@ -69,12 +70,11 @@ class SwarmDriver:
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
 
-        
-        launch_file = "hardcode_drone.launch"
-        launch_files = []
-        cli_args = []
-
         for num in range(self.drone_num): #only applicable till 9 drones
+            
+            launch_file = "hardcode_drone.launch"
+            launch_files = []
+
 
             cli_args = ['drone_swarm',
                         launch_file,
@@ -86,7 +86,10 @@ class SwarmDriver:
                         '~target:={}'.format(self.pass_processed_rosbag_data()),                        
                         ]
             
+            print(cli_args)
+            
             roslaunch_args = cli_args[2:]
+            print(roslaunch_args)
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
             
             launch_files=[(roslaunch_file, roslaunch_args)]
@@ -94,8 +97,6 @@ class SwarmDriver:
             parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
 
             parent.start()
-
-            print("spawned one")
             
     def pass_processed_rosbag_data(self):
         hardcoded_instructions = [
