@@ -2,8 +2,8 @@
 
 # To be run to pull
 # In order to run:
-#   1. Make the file an executable using command "chmod +x ~/catkin_ws/src/drone_swarm/scripts/pull.sh"
-#   2. Run the file using command "bash ~/catkin_ws/src/drone_swarm/scripts/pull.sh"
+#   1. Make the file an executable using command "chmod +x ~/catkin_ws/src/drone_swarm/scripts/fetch.sh"
+#   2. Run the file using command "bash ~/catkin_ws/src/drone_swarm/scripts/fetch.sh"
 
 # Important to note that this script does NOT merge branches. That will have to be done manually
 
