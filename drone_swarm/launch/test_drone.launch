@@ -1,30 +1,30 @@
 <launch>
   <arg name="name" default="tello" />
   <arg name="id" default="1" />
-  <arg name="drone_ip" default="192.168.0.101" />
+  <arg name="drone_ip" default="192.168.0.105" />
   <arg name="local_port" default="9010" />
   <arg name="group" default="B" />
   <arg name="target" default="[]" />    
   <group ns="$(arg group)">
 
-    <!-- Start the tello_driver -->
-    <node name="drone_node" pkg="drone_swarm" type="tello_driver.py" output="screen">
+    <!-- Start the test_driver -->
+    <node name="drone_node" pkg="drone_swarm" type="test_driver.py" output="screen">
       <param name="~name" value="$(arg name)"/>
       <param name="~id" value="$(arg id)"/>
       <param name="~drone_ip" value="$(arg drone_ip)"/>
       <param name="~local_port" value="$(arg local_port)"/>
     </node>
 
-    <!-- Start the tello_controller -->
-    <node name="drone_controller_node" pkg="drone_swarm" type="tello_controller.py" output="screen">
+    <!-- Start the test_controller -->
+    <node name="drone_controller_node" pkg="drone_swarm" type="test_controller.py" output="screen">
       <param name="~name" value="$(arg name)"/>
       <param name="~id" value="$(arg id)"/>
       <param name="~group" value="$(arg group)"/>
       <param name="~target" value="$(arg target)"/>
     </node>
 
-    <node name="sim_node" pkg="drone_swarm" type="turtle_sim.py" output="screen">
-    </node>
+    <!-- <node name="sim_node" pkg="drone_swarm" type="turtle_sim.py" output="screen">
+    </node> -->
 
     <node name="test_node" pkg="drone_swarm" type="test_drone_launch.py" output="screen">
     </node>
