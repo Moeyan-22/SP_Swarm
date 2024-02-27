@@ -5,10 +5,9 @@ import subprocess
 import roslaunch
 import numpy as np
 import json
-from drone_swarm.msg import Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Pose
 
 class SwarmDriver:
 
@@ -33,7 +32,7 @@ class SwarmDriver:
 
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Int32, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
-        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Point, self.get_rosbag_data, queue_size=10)
+        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
 
 
 
@@ -78,38 +77,36 @@ class SwarmDriver:
 
 
     def pass_launch_args(self):
-
-        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        roslaunch.configure_logging(uuid)
-
-        
         launch_file = "drone.launch"
-        launch_files = []
-        cli_args = []
+        parents = []
 
-        for num in range(self.drone_num): #only applicable till 9 drones
-
+        for num in range(self.drone_num):
+            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+            roslaunch.configure_logging(uuid)
             cli_args = ['drone_swarm',
                         launch_file,
-                        '~name:=tello{}'.format(num),
-                        '~id:={}'.format(num),
-                        '~drone_ip:=192.168.0.10{}'.format(num + 1),
-                        '~local_port:=901{}'.format(num),
-                        '~group:={}'.format(self.group),
-                        '~target:={}'.format(self.pass_processed_rosbag_data()),                        
+                        'name:=tello{}'.format(num),
+                        'id:={}'.format(num),
+                        'drone_ip:=192.168.0.10{}'.format(num + 1),
+                        'local_port:=901{}'.format(num),
+                        'group:={}'.format(self.group),
+                        'target:={}'.format(self.pass_processed_rosbag_data()),                        
                         ]
             
             roslaunch_args = cli_args[2:]
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
-            
             launch_files=[(roslaunch_file, roslaunch_args)]
-
             parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
+            parents.append(parent)
+            print(parents)
 
+        for parent in parents:
             parent.start()
             
     def pass_processed_rosbag_data(self):
-        return json.dumps(self.sliced_data)
+        rosbag_data = self.sliced_data.tolist()
+        rosbag_data = json.dumps(rosbag_data)
+        return json.dumps(rosbag_data)
 
     def start(self):
         self.get_rosbag()
