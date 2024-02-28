@@ -5,6 +5,7 @@ from std_msgs.msg import String
 from drone_swarm.msg import Array
 
 
+
 import socket
 import threading
 import subprocess
@@ -46,14 +47,14 @@ class DroneNode:
         self.local_port = rospy.get_param('~local_port', 9010)
 
         self.response = ''
-        self.mpad = 0
-        self.known_mpad = []
+        self.current_mpad = -2
+        self.known_mpad = [0]
         self.rate = rospy.Rate(20)
         self.rescue = False
 
         self.action_pub = rospy.Publisher('/{}/action'.format(self.name), String, queue_size=10)
-        self.mpad_pub = rospy.Publisher('mpad', Array, queue_size=10)
-        self.mpad_sub = rospy.Subscriber('mpad', Array, self.get_mpad, queue_size=10)
+        self.mpad_pub = rospy.Publisher('/mpad', Array, queue_size=10)
+        self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
         self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
 
 
@@ -83,58 +84,49 @@ class DroneNode:
 
     def rescue_action(self):
         self.send('stop')
-        self.send('go 100 0 0 10 {}'.format(self.mpad))
-
-    def check(self, message):
-        if message != 'ok' and message != 'error':
-            self.mpad = message.find('mpad:')
-            if self.mpad != -1:
-                self.mpad = int(message[self.mpad + 5])
+        self.send('go 100 0 0 10 {}'.format(self.current_mpad))
  
 
     def receive_command(self):
         while not rospy.is_shutdown():
             self.response, _ = self.sock.recvfrom(128)
             self.response = self.response.decode(encoding='utf-8').strip()
-            rospy.loginfo(f"Received reply from drone: {self.response}")
-            self.check(self.response)
+            #rospy.loginfo(f"Received reply from drone: {self.response}")
+            if self.response != "-1" and self.response != "ok":
+                print("is integer")
+                if int(self.response) != -1:
+                    self.current_mpad = int(self.response)
             self.rate.sleep()
 
     def get_mpad(self, data):
         self.known_mpad = data
-
+        
     def update_mpad(self):
+        
         while not rospy.is_shutdown():
-            for mpad in self.known_mpad:
-                if self.mpad != -1:
-                    self.check_mpad(mpad)
-                else:
-                    pass
-
-            self.rate.sleep()
-
-    def check_mpad(self, mpad):
-
-        special = False
-        rescured = False
-
-        if self.mpad != mpad:
-            self.rescue = True
-            self.known_mpad.append(self.mpad)
-            self.mpad_pub.publish(self.known_mpad)
-        elif self.mpad == mpad:
-            special = self.check_special(mpad)
-            if special == False:
-                pass
-            elif special == True:
-                rescured = self.check_rescured(mpad)
-                if rescured == False:
-                    self.rescue = True
-                    self.known_mpad.append(self.mpad)
+            print(self.current_mpad)
+            if self.current_mpad != -1:
+                print("should happen")
+                if self.current_mpad not in self.known_mpad:
+                    print("smth diff")
+                    self.known_mpad.append(self.current_mpad)
+                    print("appended data!: {}".format(self.known_mpad))
                     self.mpad_pub.publish(self.known_mpad)
-                elif rescured == True:
-                    pass
-    
+                else:
+                    special = self.check_special(self.current_mpad)
+                    if special is False:
+                        self.mpad_pub.publish(self.known_mpad)
+
+                    elif special is True:
+                        rescured = self.check_rescured(self.current_mpad)
+                        if rescured is False:
+                            self.known_mpad.append(self.current_mpad)
+                            self.mpad_pub.publish(self.known_mpad)
+                        elif rescured is True:
+                            self.mpad_pub.publish(self.known_mpad)
+
+                    
+            self.rate.sleep()
 
     def check_special(self, mpad):
         if (mpad % 2 == 0) :
@@ -154,13 +146,20 @@ class DroneNode:
         else:
             rospy.logerr("Unexpected count value: {}".format(count))
             return False        
+        
+    def send_mpad(self):
+        while not rospy.is_shutdown():
+            self.mpad_pub.publish(self.known_mpad)
 
 
     def start(self):
-        response_thread = threading.Thread(target=self.receive_command())
+        response_thread = threading.Thread(target=self.receive_command)
         response_thread.start()
 
-        self.update_mpad
+        send_mpad_thread = threading.Thread(target=self.send_mpad)
+        send_mpad_thread.start()
+
+        self.update_mpad()
 
         rospy.spin()
 

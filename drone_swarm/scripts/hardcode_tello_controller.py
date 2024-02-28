@@ -72,8 +72,6 @@ class DroneController:
     def execute_takeoff(self):
         self.cmd_queue.put("command")
         self.cmd_queue.put("mon")
-        self.cmd_queue.put("takeoff")
-        print("{} executing takeoff".format(self.name))
 
 
     def get_uwb(self, data):
