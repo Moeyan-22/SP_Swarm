@@ -42,8 +42,6 @@ class DroneController:
         self.group = rospy.get_param('~group', 'A')
         self.target_raw_string = rospy.get_param('~target', '[]')
         self.target_raw = json.loads(self.target_raw_string)
-        self.ns = self.name + str(self.id)
-        print(self.ns)
 
         self.target = []
         self.takeoff = 0
@@ -51,30 +49,32 @@ class DroneController:
         self.current_sequence = 0
         self.x = 0
         self.y = 0
-        self.total_steps = 20
-        self.step = 0.1
+        self.total_steps = 10
+        self.step = 1
         self.step_interval = rospy.Rate(1/0.1) 
         self.base_speed = 0.3
         self.max_pos_error = 0.1
         self.max_movement = 100
         
-        self.command_pub = rospy.Publisher('/{}/cmd'.format(self.ns), String, queue_size=10)
-        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.ns), Point, self.get_uwb, queue_size=10)
+        self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_uwb, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Int32, self.get_sequence, queue_size=10)
 
 
     def get_takeoff_command(self, data):
-        self.takeoff = data.data
-        if self.takeoff == 1:
+        if self.takeoff == 0:
+            self.takeoff = data.data
+        elif self.takeoff == 1:
             self.execute_takeoff()
             self.takeoff += 1
 
     def execute_takeoff(self):
         self.cmd_queue.put("command")
         self.cmd_queue.put("mon")
-        self.cmd_queue.put("mdirection 0")
         self.cmd_queue.put("takeoff")
+        print("{} executing takeoff".format(self.name))
+
 
     def get_uwb(self, data):
         self.x = data.x
@@ -102,18 +102,20 @@ class DroneController:
     def timing_control(self):
 
         i = 0
-
+        
         while not rospy.is_shutdown():
-            if not self.cmd_queue.empty():
+            if not self.cmd_queue.empty() and i == 0:
                 cmd = self.cmd_queue.get()
                 self.command_pub.publish(cmd)
                 i += self.step
                 self.step_interval.sleep()
             else:
-                pass
+                self.command_pub.publish("mid?")
+                i += self.step
+                self.step_interval.sleep()
 
-            while i < self.total_steps:
-                self.command_pub.publish("state?")
+            while i < self.total_steps and i != 0:
+                self.command_pub.publish("mid?")
                 i += self.step
                 self.step_interval.sleep()
 
@@ -121,8 +123,8 @@ class DroneController:
                     i = 0
 
     def start(self):
-        self.process_target_raw()
         self.timing_control()
+        #self.process_target_raw()
 
 
 if __name__ == '__main__':
@@ -132,7 +134,7 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.logerr("ROS node interrupted.")
     except Exception as e:
-        rospy.logerr("Error msg: {}".format(e))
+        rospy.logerr("Error at hardcode_tello_controller {}".format(e))
 
 
 
