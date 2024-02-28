@@ -94,6 +94,7 @@ class DroneNode:
 
     def update_mpad(self):
         while not rospy.is_shutdown():
+            print(self.known_mpad)
             for mpad in self.known_mpad:
                 if self.mpad != -1:
                     self.check_mpad(mpad)
