@@ -3,9 +3,9 @@
   <arg name="id" default="1" />
   <arg name="drone_ip" default="192.168.0.101" />
   <arg name="local_port" default="9010" />
-  <arg name="group" default="B" />
+  <arg name="group" default="A" />
   <arg name="target" default="[]" />    
-  <group ns="$(arg group)">
+  <group ns="$(arg name)">
 
     <!-- Start the tello_driver -->
     <node name="drone_node" pkg="drone_swarm" type="tello_driver.py" output="screen">

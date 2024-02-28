@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import rospy
+import random
 import subprocess
 import roslaunch
 import numpy as np
@@ -10,15 +11,19 @@ from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
 import time
+import string
+
 
 class SwarmDriver:
 
+
+
     def __init__(self):
 
-        rospy.init_node('swarm_driver', anonymous=True)
+        rospy.init_node('swarm_driver_' ,anonymous=True)
 
         self.group = rospy.get_param('~group', 'A')
-        self.drone_num = rospy.get_param('~drone_num', 2)
+        self.drone_num = rospy.get_param('~drone_num', 1)
         self.rosbag_id = rospy.get_param('~rosbag_id', 1)
 
         self.takeoff = 0
@@ -46,6 +51,8 @@ class SwarmDriver:
         
         """
 
+
+
     def publish_takeoff_command(self): #hardcoded
         takeoff_command = Int32()
         takeoff_command.data = 1  
@@ -54,7 +61,6 @@ class SwarmDriver:
 
     
     def sequencer(self):
-        self.takeoff = 1 #manual setoff
         if self.takeoff == 1:
 
             for drone in self.drone_num:
@@ -69,23 +75,22 @@ class SwarmDriver:
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
 
-        
-        launch_file = "hardcode_drone.launch"
-        launch_files = []
-        cli_args = []
-
         for num in range(self.drone_num): #only applicable till 9 drones
+            
+            launch_file = "hardcode_drone.launch"
+            launch_files = []
+
 
             cli_args = ['drone_swarm',
                         launch_file,
-                        '~name:=tello{}'.format(num),
-                        '~id:={}'.format(num),
-                        '~drone_ip:=192.168.0.10{}'.format(num + 1),
-                        '~local_port:=901{}'.format(num),
-                        '~group:={}'.format(self.group),
-                        '~target:={}'.format(self.pass_processed_rosbag_data()),                        
+                        'name:=tello{}'.format(num),
+                        'id:={}'.format(num),
+                        'drone_ip:=192.168.0.10{}'.format(num + 1),
+                        'local_port:=901{}'.format(num),
+                        'group:={}'.format(self.group),
+                        'target:={}'.format(self.pass_processed_rosbag_data()),                        
                         ]
-            
+                        
             roslaunch_args = cli_args[2:]
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
             
@@ -94,8 +99,6 @@ class SwarmDriver:
             parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
 
             parent.start()
-
-            print("spawned one")
             
     def pass_processed_rosbag_data(self):
         hardcoded_instructions = [
@@ -115,10 +118,10 @@ class SwarmDriver:
     def start(self):
         self.pass_launch_args()
         time.sleep(5)
-        print("started takeoff")
         while not rospy.is_shutdown():
             self.publish_takeoff_command()
-            self.rate.sleep()
+
+
 
 if __name__ == '__main__':
     try:
@@ -127,4 +130,4 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.logerr("ROS node interrupted.")
     except Exception as e:
-        rospy.logerr("Error at Swarm driver: {}".format(e))
+        rospy.logerr("Error at Hardcode swarm driver: {}".format(e))

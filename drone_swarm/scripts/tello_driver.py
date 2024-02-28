@@ -7,6 +7,8 @@ from drone_swarm.msg import Array
 
 import socket
 import threading
+import subprocess
+import time
 
 class DroneNode:
 
@@ -28,6 +30,7 @@ class DroneNode:
      - local port
     
     *Note commads such as 'mid?' and 'takeoff' is sent through tello_controller
+    *added graceful shutdown
 
     
     """
@@ -41,20 +44,27 @@ class DroneNode:
         self.id = rospy.get_param('~id', 0)
         self.drone_ip = rospy.get_param('~drone_ip', '192.168.0.101')
         self.local_port = rospy.get_param('~local_port', 9010)
-        self.ns = self.name + str(self.id)
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('', self.local_port))
         self.response = ''
         self.mpad = 0
         self.known_mpad = []
         self.rate = rospy.Rate(20)
         self.rescue = False
 
-        self.action_pub = rospy.Publisher('/{}/action'.format(self.ns), String, queue_size=10)
+        self.action_pub = rospy.Publisher('/{}/action'.format(self.name), String, queue_size=10)
         self.mpad_pub = rospy.Publisher('mpad', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('mpad', Array, self.get_mpad, queue_size=10)
-        self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.ns), String, self.send_command, queue_size=10)
+        self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
+
+
+        #kills any previously running pid
+        script_path = '/home/swarm/catkin_ws/src/drone_swarm/cleanup/kill_processes.sh'
+        subprocess.run(['bash', script_path, str(self.local_port)])
+        print("killed old pid on port {}".format(self.local_port))
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind(('', self.local_port))
+
 
     def send(self, message = ''):
         try:
@@ -64,7 +74,8 @@ class DroneNode:
 
     def send_command(self, command = ''):
         if self.rescue == False:
-            rospy.loginfo(f"executing command: {command.data}")
+            if command.data != "mid?":
+                rospy.loginfo(f"executing command: {command.data}")
             self.send(command.data)
             self.action_pub.publish(command)
         else:
@@ -146,14 +157,14 @@ class DroneNode:
 
 
     def start(self):
-        # Start the receive_response thread
         response_thread = threading.Thread(target=self.receive_command())
         response_thread.start()
 
         self.update_mpad
 
-        # Spin until the node is shut down
         rospy.spin()
+
+
 
 if __name__ == '__main__':
     try:

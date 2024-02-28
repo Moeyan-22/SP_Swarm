@@ -1,6 +1,6 @@
 <launch>
 
-    <arg name="total_drone" default="3" />
+    <arg name="total_drone" default="5" />
 
     <!-- Start the ROS core -->
     <node name="roscore" pkg="ros" type="core" output="screen"/>
