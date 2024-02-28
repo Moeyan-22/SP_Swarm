@@ -42,6 +42,7 @@ class DroneController:
         self.group = rospy.get_param('~group', 'A')
         self.target_raw_string = rospy.get_param('~target', '[]')
         self.target_raw = json.loads(self.target_raw_string)
+        self.ns = self.name + str(self.id)
 
         self.target = []
         self.takeoff = 0
@@ -56,8 +57,8 @@ class DroneController:
         self.max_pos_error = 0.1
         self.max_movement = 100
         
-        self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
-        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_uwb, queue_size=10)
+        self.command_pub = rospy.Publisher('/{}/cmd'.format(self.ns), String, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.ns), Point, self.get_uwb, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Int32, self.get_sequence, queue_size=10)
 
@@ -73,7 +74,7 @@ class DroneController:
     def execute_takeoff(self):
         self.cmd_queue.put("command")
         self.cmd_queue.put("mon")
-        self.cmd_queue.put("takeoff")
+        # self.cmd_queue.put("takeoff")
 
     def get_uwb(self, data):
         self.x = data.x
