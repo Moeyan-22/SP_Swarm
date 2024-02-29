@@ -17,7 +17,7 @@ class TakeoffCommandPublisher:
         self.takeoff_command_pub.publish(takeoff_command)
 
     def start(self):
-        time.sleep(2)
+        time.sleep(3)
         print("started takeoff")
         while not rospy.is_shutdown():
             self.publish_takeoff_command()

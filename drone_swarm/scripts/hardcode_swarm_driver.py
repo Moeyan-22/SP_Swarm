@@ -6,12 +6,13 @@ import subprocess
 import roslaunch
 import numpy as np
 import json
-from drone_swarm.msg import String_Array
+from drone_swarm.msg import Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
 import time
 import string
+import threading
 
 
 class SwarmDriver:
@@ -27,7 +28,7 @@ class SwarmDriver:
         self.rosbag_id = rospy.get_param('~rosbag_id', 1)
 
         self.takeoff = 0
-        self.sequence_delay = 20
+        self.sequence_delay = 5 #interval for each drone
         self.sequence_rate = rospy.Rate(1/self.sequence_delay)
         self.bag_file_path = ""
         self.rosbag_iteration = 0
@@ -35,10 +36,20 @@ class SwarmDriver:
         self.sliced_data = []
         self.slicing_rate = 10
         self.uuid = ""
+        self.mpad_from_drones = 0
+        self.known_mpad = [0]
+        self.rate = rospy.Rate(20)
+        self.data = [0,0]
+        self.id_of_data = 0
+        self.drone_that_has_published = []
 
 
-        self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Int32, queue_size=10)
+        self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
+        self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
+        self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
+
+
 
         """
         now triggered manually with self.takeoff = 1
@@ -61,13 +72,12 @@ class SwarmDriver:
 
     
     def sequencer(self):
-        if self.takeoff == 1:
-
-            for drone in self.drone_num:
-                current_sequence = 1
-                current_sequence += drone
-                self.sequence_pub.publish(current_sequence)
-                self.sequence_rate.sleep()
+        time.sleep(5)
+        while not rospy.is_shutdown():
+            current_sequence = []
+            current_sequence.append(0)
+            self.sequence_pub.publish(current_sequence)
+            self.sequence_rate.sleep()
 
 
     def pass_launch_args(self):
@@ -102,24 +112,78 @@ class SwarmDriver:
             
     def pass_processed_rosbag_data(self):
         hardcoded_instructions = [
-            'rc 0 0 0 0',
-            'rc 0 0 0 0',
-            'rc 0 0 0 0',
-            'rc 0 0 0 0',
-            'rc 0 0 0 0',
-            'rc 0 0 0 0',
-            'rc 0 0 0 0',
-            'rc 0 0 0 0',
-            'rc 0 0 0 0'
+            'rc 100 0 0 0',
+            'rc 100 10 0 0',
+            'rc 100 10 0 0',
+            'rc 100 10 0 0'
         ]
         
         return json.dumps(hardcoded_instructions)
 
     def start(self):
+        self.send_mpad
         self.pass_launch_args()
-        time.sleep(5)
+        time.sleep(2)
+        sequencer_thread = threading.Thread(target=self.sequencer)
+        sequencer_thread.start()
         while not rospy.is_shutdown():
             self.publish_takeoff_command()
+
+
+    def send_mpad(self):
+        while not rospy.is_shutdown():
+            self.mpad_pub.publish(self.known_mpad)
+
+    def get_mpad(self, data):
+        self.data = data.data
+        self.mpad_from_drones = self.data[1]
+        self.id_of_data = self.data[0]
+        self.update_mpad()
+
+    def update_mpad(self):
+        special = None
+        rescured = None
+        
+        if self.mpad_from_drones != -1:
+            if self.mpad_from_drones not in self.known_mpad:
+                self.known_mpad.append(self.mpad_from_drones)
+                self.mpad_pub.publish(self.known_mpad)
+                self.drone_that_has_published.append(self.id_of_data)
+            elif self.mpad_from_drones in self.known_mpad and self.id_of_data not in self.drone_that_has_published:
+                special = self.check_special(self.mpad_from_drones)
+                if special is False:
+                    self.mpad_pub.publish(self.known_mpad)
+                elif special is True:
+                    rescured = self.check_rescured(self.mpad_from_drones)
+                    if rescured is False:
+                        self.known_mpad.append(self.mpad_from_drones)
+                        self.mpad_pub.publish(self.known_mpad)
+                    elif rescured is True:
+                        self.mpad_pub.publish(self.known_mpad)
+        elif self.mpad_from_drones == -1:
+            self.mpad_pub.publish(self.known_mpad)
+
+
+
+    def check_special(self, mpad):
+        if (mpad % 2 == 0) :
+            return True
+        else:
+            return False
+        
+    def check_rescured(self, mpad):
+
+        count = 0
+
+        count = self.known_mpad.count(mpad)
+        if count == 1:
+            return False
+        elif count == 2:
+            return True
+        else:
+            rospy.logerr("Unexpected count value: {}".format(count))
+            return False        
+        
 
 
 

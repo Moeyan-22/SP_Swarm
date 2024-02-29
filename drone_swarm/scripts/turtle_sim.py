@@ -27,15 +27,15 @@ class TurtleSim:
         
         self.root = tk.Tk()
         self.root.title('Turtle Controller')
-        self.canvas = ScrolledCanvas(self.root)
+        self.canvas = ScrolledCanvas(self.root, width=1000, height=2000)
         self.canvas.pack()
         self.canvas.bind("<Motion>", self.mouse_motion_callback)
         self.mouse_pos_pub = rospy.Publisher('mouse_pose', Pose, queue_size=10)
 
     def edit_turtle_starting_position(self):
         for i in range(self.total_turtle):
-            self.turtle_starting_position[i][0] = 0 + i*100
-            self.turtle_starting_position[i][1] = 0
+            self.turtle_starting_position[i][0] = -300 + i*100
+            self.turtle_starting_position[i][1] = -100
 
 
     def create_turtle_objects(self):
@@ -52,11 +52,11 @@ class TurtleSim:
             self.start_turtle(i)
 
     def start_turtle(self, i):
-        turtle_action_subscriber = rospy.Subscriber('/{}/action'.format('tello' + str(i+1)), String, lambda data, i: self.get_action(data, i), callback_args=i, queue_size=10)
+        turtle_action_subscriber = rospy.Subscriber('/{}/action'.format('tello' + str(i)), String, self.get_action, callback_args=(i), queue_size=10)
         self.turtle_subscribers.append(turtle_action_subscriber)
     
     def get_action(self, data, i):
-        (self.turtles[i]).action = data.data
+        self.turtles[i].action = data.data
 
     def start_action(self):
         for i in range(len(self.turtle_subscribers)):
@@ -68,7 +68,7 @@ class TurtleSim:
         while not rospy.is_shutdown():
             rate = rospy.Rate(20)
 
-            command_received = (self.turtles[i]).action
+            command_received = self.turtles[i].action
             if command_received == "command":
                 self.turtles[i].fillcolor("red")
             elif command_received == "takeoff":
@@ -78,7 +78,7 @@ class TurtleSim:
                 x_offset = numbers[0]
                 y_offset = numbers[1]
                 # Move forward and right independently
-                self.turtles[i].goto((self.turtles[i]).xcor() + y_offset, (self.turtles[i]).ycor() + x_offset)  # Move right by 20 pixels
+                self.turtles[i].goto(self.turtles[i].xcor() + y_offset, self.turtles[i].ycor() + x_offset)  # Move right by 20 pixels
             rate.sleep()
 
     def mouse_motion_callback(self, event):

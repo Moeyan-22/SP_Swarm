@@ -3,6 +3,7 @@
 import rospy
 from std_msgs.msg import String
 from drone_swarm.msg import Array
+from std_msgs.msg import Int32
 
 
 
@@ -47,14 +48,17 @@ class DroneNode:
         self.local_port = rospy.get_param('~local_port', 9010)
 
         self.response = ''
-        self.current_mpad = -2
+        self.current_mpad = -1
         self.known_mpad = [0]
-        self.rate = rospy.Rate(20)
+        self.rate = rospy.Rate(15)
         self.rescue = False
+        self.actioned = False
+
+
 
         self.action_pub = rospy.Publisher('/{}/action'.format(self.name), String, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad', Array, queue_size=10)
-        self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
+        self.mpad_sub = rospy.Subscriber('/mpad_database', Array, self.get_mpad, queue_size=10)
         self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
 
 
@@ -62,7 +66,7 @@ class DroneNode:
         script_path = '/home/swarm/catkin_ws/src/drone_swarm/cleanup/kill_processes.sh'
         subprocess.run(['bash', script_path, str(self.local_port)])
         print("killed old pid on port {}".format(self.local_port))
-
+        time.sleep(0.1)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', self.local_port))
 
@@ -79,12 +83,19 @@ class DroneNode:
                 rospy.loginfo(f"executing command: {command.data}")
             self.send(command.data)
             self.action_pub.publish(command)
-        else:
-            self.rescue_action()
-
-    def rescue_action(self):
+        
+    def rescue_action_1(self):
         self.send('stop')
+        time.sleep(1)
+        self.send('land')
+
+    def rescue_action_2(self):
+        self.send('stop')
+        time.sleep(1)
         self.send('go 100 0 0 10 {}'.format(self.current_mpad))
+        time.sleep(1)
+        self.send('land')
+
  
 
     def receive_command(self):
@@ -92,40 +103,44 @@ class DroneNode:
             self.response, _ = self.sock.recvfrom(128)
             self.response = self.response.decode(encoding='utf-8').strip()
             #rospy.loginfo(f"Received reply from drone: {self.response}")
-            if self.response != "-1" and self.response != "ok":
-                print("is integer")
-                if int(self.response) != -1:
-                    self.current_mpad = int(self.response)
+
+            if self.response != "ok":
+                self.current_mpad = int(self.response)
             self.rate.sleep()
 
     def get_mpad(self, data):
-        self.known_mpad = data
+        self.known_mpad = data.data
         
     def update_mpad(self):
-        
-        while not rospy.is_shutdown():
-            print(self.current_mpad)
+
+        special = None
+        rescured = None
+
+        self.mpad_pub.publish([self.id, self.current_mpad])
+
+        while not rospy.is_shutdown() and self.actioned == False:
             if self.current_mpad != -1:
-                print("should happen")
                 if self.current_mpad not in self.known_mpad:
-                    print("smth diff")
-                    self.known_mpad.append(self.current_mpad)
-                    print("appended data!: {}".format(self.known_mpad))
-                    self.mpad_pub.publish(self.known_mpad)
-                else:
+                        print("land 1")
+                        self.mpad_pub.publish([self.id, self.current_mpad])
+                        self.actioned = True
+                        #self.rescue_action_1()
+                        time.sleep(1)
+                        break
+                elif self.current_mpad in self.known_mpad:
                     special = self.check_special(self.current_mpad)
                     if special is False:
-                        self.mpad_pub.publish(self.known_mpad)
-
+                        pass
                     elif special is True:
                         rescured = self.check_rescured(self.current_mpad)
                         if rescured is False:
-                            self.known_mpad.append(self.current_mpad)
-                            self.mpad_pub.publish(self.known_mpad)
-                        elif rescured is True:
-                            self.mpad_pub.publish(self.known_mpad)
-
-                    
+                            self.actioned = True
+                            self.mpad_pub.publish([self.id, self.current_mpad])
+                            time.sleep(0.5)
+                            print("land 2")
+                            #self.rescue_action_2()
+                            break
+            self.mpad_pub.publish([self.id, self.current_mpad])
             self.rate.sleep()
 
     def check_special(self, mpad):
@@ -147,17 +162,14 @@ class DroneNode:
             rospy.logerr("Unexpected count value: {}".format(count))
             return False        
         
-    def send_mpad(self):
-        while not rospy.is_shutdown():
-            self.mpad_pub.publish(self.known_mpad)
+
 
 
     def start(self):
         response_thread = threading.Thread(target=self.receive_command)
         response_thread.start()
 
-        send_mpad_thread = threading.Thread(target=self.send_mpad)
-        send_mpad_thread.start()
+        time.sleep(1)
 
         self.update_mpad()
 

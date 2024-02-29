@@ -7,6 +7,7 @@ import json
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
+from drone_swarm.msg import Array
 
 
 
@@ -59,7 +60,7 @@ class DroneController:
         self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
         self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_uwb, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
-        self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Int32, self.get_sequence, queue_size=10)
+        self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
 
 
     def get_takeoff_command(self, data):
@@ -72,7 +73,7 @@ class DroneController:
     def execute_takeoff(self):
         self.cmd_queue.put("command")
         self.cmd_queue.put("mon")
-
+        self.cmd_queue.put("takeoff")
 
     def get_uwb(self, data):
         self.x = data.x
@@ -80,21 +81,24 @@ class DroneController:
 
     def process_target_raw(self):
         self.target = self.target_raw
-        self.positioning()
         
     def positioning(self):
-        if self.started:
-            for i in range(len(self.target)):
-                self.cmd_queue.put(self.target[i])
-
+        print(self.target)
+        for i in range(len(self.target)):
+            self.cmd_queue.put(self.target[i])
 
     def get_sequence(self, data):
         self.current_sequence = data.data
         self.check_seqeunce()
 
     def check_seqeunce(self):
-        if self.current_sequence == self.id and self.started == False:
+        if self.id in self.current_sequence and self.started == False:
             self.started = True
+            print("drone {} called".format(self.id))
+            self.process_target_raw()
+            self.positioning()
+
+
         
 
     def timing_control(self):
@@ -122,7 +126,7 @@ class DroneController:
 
     def start(self):
         self.timing_control()
-        #self.process_target_raw()
+
 
 
 if __name__ == '__main__':
