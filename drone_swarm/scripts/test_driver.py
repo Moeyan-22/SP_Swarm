@@ -47,13 +47,13 @@ class DroneNode:
         self.sock.bind(('', self.local_port))
         self.response = ''
         self.mpad = 0
-        self.known_mpad = []
+        self.known_mpad = [0]
         self.rate = rospy.Rate(20)
         self.rescue = False
 
         self.action_pub = rospy.Publisher('/{}/action'.format(self.ns), String, queue_size=10)
-        self.mpad_pub = rospy.Publisher('mpad', Array, queue_size=10)
-        self.mpad_sub = rospy.Subscriber('mpad', Array, self.get_mpad, queue_size=10)
+        self.mpad_pub = rospy.Publisher('/mpad', Array, queue_size=10)
+        self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
         self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.ns), String, self.send_command, queue_size=10)
 
     def send(self, message = ''):
@@ -64,7 +64,8 @@ class DroneNode:
 
     def send_command(self, command = ''):
         if self.rescue == False:
-            rospy.loginfo(f"executing command: {command.data}")
+            if command.data != "mid?":
+                rospy.loginfo(f"executing command: {command.data}")
             self.send(command.data)
             self.action_pub.publish(command)
         else:
@@ -85,7 +86,8 @@ class DroneNode:
         while not rospy.is_shutdown():
             self.response, _ = self.sock.recvfrom(128)
             self.response = self.response.decode(encoding='utf-8').strip()
-            rospy.loginfo(f"Received reply from drone: {self.response}")
+            if self.response != "-1":
+                rospy.loginfo(f"Received reply from drone: {self.response}")
             self.check(self.response)
             self.rate.sleep()
 
@@ -94,6 +96,8 @@ class DroneNode:
 
     def update_mpad(self):
         while not rospy.is_shutdown():
+            self.mpad_pub.publish(self.known_mpad)
+            print(self.known_mpad)
             for mpad in self.known_mpad:
                 if self.mpad != -1:
                     self.check_mpad(mpad)
@@ -106,7 +110,6 @@ class DroneNode:
 
         special = False
         rescured = False
-
         if self.mpad != mpad:
             self.rescue = True
             self.known_mpad.append(self.mpad)

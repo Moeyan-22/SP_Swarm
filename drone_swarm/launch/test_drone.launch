@@ -1,7 +1,7 @@
 <launch>
   <arg name="name" default="tello" />
   <arg name="id" default="1" />
-  <arg name="drone_ip" default="192.168.0.105" />
+  <arg name="drone_ip" default="192.168.0.106" />
   <arg name="local_port" default="9010" />
   <arg name="group" default="B" />
   <arg name="target" default="[]" />    
