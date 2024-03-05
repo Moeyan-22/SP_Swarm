@@ -10,14 +10,13 @@ from drone_swarm.msg import Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
+from geometry_msgs.msg import Pose
 import time
 import string
 import threading
 
 
 class SwarmDriver:
-
-
 
     def __init__(self):
 
@@ -28,39 +27,60 @@ class SwarmDriver:
         self.rosbag_id = rospy.get_param('~rosbag_id', 1)
 
         self.takeoff = 0
-        self.sequence_delay = 5 #interval for each drone
-        self.sequence_rate = rospy.Rate(1/self.sequence_delay)
         self.bag_file_path = ""
         self.rosbag_iteration = 0
-        self.rosbag_data = np.array([0,0])
+        self.rosbag_data = np.array([])
         self.sliced_data = []
-        self.slicing_rate = 10
+        self.slicing_rate = 5
         self.uuid = ""
         self.mpad_from_drones = 0
         self.known_mpad = [0]
         self.rate = rospy.Rate(20)
         self.data = [0,0]
+        self.str_data = []
         self.id_of_data = 0
         self.drone_that_has_published = []
-
 
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
+        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+
+
+    def get_rosbag(self):
+        self.bag_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/final/rosbag{}.bag".format(self.rosbag_id)
+        try:
+            playback_rate = 10
+            command = ['rosbag', 'play', '-r', str(playback_rate), self.bag_file_path]
+            process = subprocess.Popen(command)
+            process.wait()
+            self.process_rosbag_data()
+        except Exception as e:
+            rospy.logerr("Error at rosbag playback: {}".format(e))
+
+    def get_rosbag_data(self, data):
+
+        rosbag_x = int(data.position.x)
+        rosbag_y = int(data.position.y)
+
+        # Append new data
+        new_row = np.array([[rosbag_x, rosbag_y]])
+
+        # If it's the first row, initialize the array
+        if self.rosbag_data.size == 0:
+            self.rosbag_data = new_row
+        else:
+            # Append the new row vertically
+            self.rosbag_data = np.vstack([self.rosbag_data, new_row])
+
+        self.rosbag_iteration += 1
 
 
 
-        """
-        now triggered manually with self.takeoff = 1
-
-        self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
-
-    def get_takeoff_command(self, data):
-        self.takeoff = data.data
-
-        
-        """
+    def process_rosbag_data(self):
+        self.sliced_data = self.rosbag_data[::self.slicing_rate]
+        self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
 
 
 
@@ -72,12 +92,22 @@ class SwarmDriver:
 
     
     def sequencer(self):
-        time.sleep(5)
+        i = 0
+        a = -1
         while not rospy.is_shutdown():
             current_sequence = []
-            current_sequence.append(0)
+            if i == 3:
+                if a != 1:
+                    current_sequence.append(a + 1)
+                    a += 1
+                    i = 0
+            elif a == 1:
+                current_sequence.append(a + 1)
+                a += 1
+                i = 0
             self.sequence_pub.publish(current_sequence)
-            self.sequence_rate.sleep()
+            i += 1
+            time.sleep(1)
 
 
     def pass_launch_args(self):
@@ -95,7 +125,7 @@ class SwarmDriver:
                         launch_file,
                         'name:=tello{}'.format(num),
                         'id:={}'.format(num),
-                        'drone_ip:=192.168.0.10{}'.format(num + 1),
+                        'drone_ip:=192.168.0.10{}'.format(num),
                         'local_port:=901{}'.format(num),
                         'group:={}'.format(self.group),
                         'target:={}'.format(self.pass_processed_rosbag_data()),                        
@@ -111,17 +141,23 @@ class SwarmDriver:
             parent.start()
             
     def pass_processed_rosbag_data(self):
-        hardcoded_instructions = [
-            'rc 100 0 0 0',
-            'rc 100 10 0 0',
-            'rc 100 10 0 0',
-            'rc 100 10 0 0'
-        ]
         
-        return json.dumps(hardcoded_instructions)
+        """
+                hardcoded_instructions = [
+            '50 10',
+            '0 200',
+            '-10 20',
+            '0 45',
+            '0 0'
+        ]
+                return json.dumps(hardcoded_instructions)
+        
+        """
+        
+        return json.dumps(self.str_data)
 
     def start(self):
-        self.send_mpad
+        self.get_rosbag()
         self.pass_launch_args()
         time.sleep(2)
         sequencer_thread = threading.Thread(target=self.sequencer)
@@ -129,10 +165,6 @@ class SwarmDriver:
         while not rospy.is_shutdown():
             self.publish_takeoff_command()
 
-
-    def send_mpad(self):
-        while not rospy.is_shutdown():
-            self.mpad_pub.publish(self.known_mpad)
 
     def get_mpad(self, data):
         self.data = data.data
@@ -183,8 +215,6 @@ class SwarmDriver:
         else:
             rospy.logerr("Unexpected count value: {}".format(count))
             return False        
-        
-
 
 
 if __name__ == '__main__':

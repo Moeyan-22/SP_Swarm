@@ -4,12 +4,11 @@ import rospy
 import queue
 import numpy as np
 import json
+import math
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
 from drone_swarm.msg import Array
-
-
 
 class DroneController:
 
@@ -50,12 +49,12 @@ class DroneController:
         self.current_sequence = 0
         self.x = 0
         self.y = 0
-        self.total_steps = 10
+        self.total_steps = 2
         self.step = 1
         self.step_interval = rospy.Rate(1/0.1) 
         self.base_speed = 0.3
-        self.max_pos_error = 0.1
-        self.max_movement = 100
+
+
         
         self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
         self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_uwb, queue_size=10)
@@ -75,17 +74,67 @@ class DroneController:
         self.cmd_queue.put("mon")
         self.cmd_queue.put("takeoff")
 
+
     def get_uwb(self, data):
         self.x = data.x
         self.y = data.y
 
     def process_target_raw(self):
         self.target = self.target_raw
+        #print(self.target)
+        #if self.id != 0 and self.id != 1:
+        #    pass
+        #for i in range(len(self.target)):
+        #    self.cmd_queue.put(self.target[i])
+
         
     def positioning(self):
+        rate = rospy.Rate(5)
+
         print(self.target)
-        for i in range(len(self.target)):
-            self.cmd_queue.put(self.target[i])
+        for target in self.target:
+            print(target)
+            while True:
+                point = Point()
+                point.x = 0
+                point.y = 0
+                alpha = 0.33
+                rc_command = ""
+                numbers = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
+                target_point = np.array([numbers[0], numbers[1]])
+                current_point = np.array([self.x, self.y])
+
+                error_x = target_point[0] - current_point[0]
+                error_y = target_point[1] - current_point[1]
+
+                #print(f"error x: {error_x} error y: {error_y}")
+
+                max_output = 100  # Adjust as needed
+                control_x = np.clip(error_x, -max_output, max_output)
+                control_y = np.clip(error_y, -max_output, max_output)
+
+                control_x = alpha * control_x + (1 - alpha) * point.x
+                control_y = alpha * control_y + (1 - alpha) * point.y
+
+                dist = np.linalg.norm(target_point - current_point)
+
+                print(f"error x:{error_x} error y:{error_y} dist: {dist}")
+
+                if dist < 5:
+                    break
+
+                point.x = control_x
+                point.y = control_y
+
+                if not math.isnan(point.x) and not math.isnan(point.y):
+                    rc_command = "rc {} {} 0 0".format(int(point.x), int(point.y))
+                else:
+                    rc_command = "rc 0 0 0 0"
+
+                self.cmd_queue.put(rc_command)
+
+                rate.sleep()
+
 
     def get_sequence(self, data):
         self.current_sequence = data.data
@@ -94,12 +143,10 @@ class DroneController:
     def check_seqeunce(self):
         if self.id in self.current_sequence and self.started == False:
             self.started = True
-            print("drone {} called".format(self.id))
+            print("drone {} called".format(self.id))                
             self.process_target_raw()
             self.positioning()
 
-
-        
 
     def timing_control(self):
 
@@ -112,7 +159,7 @@ class DroneController:
                 i += self.step
                 self.step_interval.sleep()
             else:
-                self.command_pub.publish("mid?")
+                self.command_pub.publish("rc 0 0 0 0")
                 i += self.step
                 self.step_interval.sleep()
 
@@ -125,7 +172,8 @@ class DroneController:
                     i = 0
 
     def start(self):
-        self.timing_control()
+        if self.id != 1:
+            self.timing_control()
 
 
 

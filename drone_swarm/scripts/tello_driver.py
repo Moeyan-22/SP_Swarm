@@ -79,17 +79,19 @@ class DroneNode:
 
     def send_command(self, command = ''):
         if self.rescue == False:
-            if command.data != "mid?":
-                rospy.loginfo(f"executing command: {command.data}")
+            #if command.data != "mid?" and command.data != "rc 0 0 0 0":
+            #    rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
             self.send(command.data)
             self.action_pub.publish(command)
         
     def rescue_action_1(self):
+        self.send('rc 0 0 0 0')
         self.send('stop')
         time.sleep(1)
         self.send('land')
 
     def rescue_action_2(self):
+        self.send('rc 0 0 0 0')
         self.send('stop')
         time.sleep(1)
         self.send('go 100 0 0 10 {}'.format(self.current_mpad))
@@ -124,7 +126,7 @@ class DroneNode:
                         print("land 1")
                         self.mpad_pub.publish([self.id, self.current_mpad])
                         self.actioned = True
-                        #self.rescue_action_1()
+                        self.rescue_action_1()
                         time.sleep(1)
                         break
                 elif self.current_mpad in self.known_mpad:
@@ -138,7 +140,7 @@ class DroneNode:
                             self.mpad_pub.publish([self.id, self.current_mpad])
                             time.sleep(0.5)
                             print("land 2")
-                            #self.rescue_action_2()
+                            self.rescue_action_2()
                             break
             self.mpad_pub.publish([self.id, self.current_mpad])
             self.rate.sleep()
@@ -166,14 +168,15 @@ class DroneNode:
 
 
     def start(self):
-        response_thread = threading.Thread(target=self.receive_command)
-        response_thread.start()
+        if id != 1:
+            response_thread = threading.Thread(target=self.receive_command)
+            response_thread.start()
 
-        time.sleep(1)
+            time.sleep(1)
 
-        self.update_mpad()
+            self.update_mpad()
 
-        rospy.spin()
+            rospy.spin()
 
 
 

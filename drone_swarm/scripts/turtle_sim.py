@@ -2,11 +2,12 @@
 
 import rospy
 import threading
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Point
 from std_msgs.msg import String
 import tkinter as tk
 from turtle import RawTurtle, ScrolledCanvas
 from geometry_msgs.msg import Pose, Point, Quaternion
+import time
 
 
 
@@ -22,50 +23,80 @@ class TurtleSim:
         self.edit_turtle_starting_position()
         self.turtles = []
         self.turtle_subscribers = []
-        self.threads = []
+        self.turtle_publishers = []
 
         
         self.root = tk.Tk()
         self.root.title('Turtle Controller')
         self.canvas = ScrolledCanvas(self.root, width=1000, height=2000)
         self.canvas.pack()
-        self.canvas.bind("<Motion>", self.mouse_motion_callback)
+        self.canvas.bind("<Motion>", self.mouse_drag_callback)
         self.mouse_pos_pub = rospy.Publisher('mouse_pose', Pose, queue_size=10)
+        self.left_button_held = False
 
     def edit_turtle_starting_position(self):
         for i in range(self.total_turtle):
-            self.turtle_starting_position[i][0] = -300 + i*100
-            self.turtle_starting_position[i][1] = -100
+            if i != 1 and i != 0:
+                self.turtle_starting_position[i][1] = -200 - (i-1)*50
+                self.turtle_starting_position[i][0] = -100
+            elif i == 0:
+                self.turtle_starting_position[i][1] = -200 - i*50
+                self.turtle_starting_position[i][0] = -100
 
 
     def create_turtle_objects(self):
         for i in range(self.total_turtle):
-            turtle = RawTurtle(self.canvas)
-            turtle.speed(2)
-            turtle.shape("circle")
-            turtle.fillcolor("black")
-            turtle.penup()
-            turtle.goto(self.turtle_starting_position[i][0], self.turtle_starting_position[i][1])
-            turtle.pendown()
-            turtle.action = ''
+            if i != 1:
+                turtle = RawTurtle(self.canvas)
+                turtle.speed(1)
+                turtle.shape("circle")
+                turtle.fillcolor("black")
+                turtle.penup()
+                turtle.goto(self.turtle_starting_position[i][0], self.turtle_starting_position[i][1])
+                turtle.pendown()
+                turtle.action = ''
             self.turtles.append(turtle)
             self.start_turtle(i)
+            self.start_coords(i)
 
     def start_turtle(self, i):
         turtle_action_subscriber = rospy.Subscriber('/{}/action'.format('tello' + str(i)), String, self.get_action, callback_args=(i), queue_size=10)
         self.turtle_subscribers.append(turtle_action_subscriber)
-    
+
     def get_action(self, data, i):
-        self.turtles[i].action = data.data
+        self.turtles[i].action = data.data        
+
+    def start_coords(self, i):
+        turtle_action_publisher = rospy.Publisher('/{}/uwb'.format('tello' + str(i)), Point, queue_size=10)
+        self.turtle_publishers.append(turtle_action_publisher)        
+        thread_pose = threading.Thread(target=self.get_coords, args=(i,))
+        thread_pose.start()
 
     def start_action(self):
         for i in range(len(self.turtle_subscribers)):
-            thread = threading.Thread(target=self.execute_action, args=(i,))
-            self.threads.append(thread)
-            thread.start()
+            thread_action = threading.Thread(target=self.execute_action, args=(i,))
+            thread_action.start()
+
+
+    def get_coords(self, i):
+        while not rospy.is_shutdown():
+
+            rate = rospy.Rate(40)
+
+            pose_msg = Point()
+
+            pose_msg.x = self.turtles[i].xcor()
+            pose_msg.y = self.turtles[i].ycor()
+
+            self.turtle_publishers[i].publish(pose_msg)
+
+            rate.sleep()
+
+        
 
     def execute_action(self, i):
         while not rospy.is_shutdown():
+
             rate = rospy.Rate(20)
 
             command_received = self.turtles[i].action
@@ -74,16 +105,23 @@ class TurtleSim:
             elif command_received == "takeoff":
                 self.turtles[i].fillcolor("green")
             elif "rc" in command_received:
-                numbers = [int(s) for s in command_received.split() if s.isdigit()]
-                x_offset = numbers[0]
-                y_offset = numbers[1]
-                # Move forward and right independently
-                self.turtles[i].goto(self.turtles[i].xcor() + y_offset, self.turtles[i].ycor() + x_offset)  # Move right by 20 pixels
+                numbers = [int(s) for s in command_received.split() if s.lstrip('-').isdigit()]                
+                y_offset = numbers[0]
+                x_offset = numbers[1]
+                
+                self.turtles[i].goto(self.turtles[i].xcor() + y_offset, self.turtles[i].ycor() + x_offset)  
             rate.sleep()
 
-    def mouse_motion_callback(self, event):
-        pose_msg = Pose(position=Point(x=event.x, y=self.canvas.winfo_reqheight() - event.y, z=0.0), orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))
+    def mouse_drag_callback(self, event):
+        adjusted_x = event.x - 505
+        adjusted_y = -event.y + 445
+        pose_msg = Pose(position=Point(x=adjusted_x, y=adjusted_y, z=0.0),
+                        orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))
         self.mouse_pos_pub.publish(pose_msg)
+
+
+
+
 
     def start(self):
         self.create_turtle_objects()

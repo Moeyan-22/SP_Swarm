@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import signal
 import numpy as np
+import time
 from geometry_msgs.msg import Pose, Point, Quaternion
 
 
@@ -21,7 +22,6 @@ class PositionCapture:
         self.status = "notrecording"
         self.version_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/version.txt"
         self.mouse_subscriber = rospy.Subscriber('/mouse_pose', Pose, lambda data: self.get_mouse_pos(data), queue_size=10)
-        self.mouse_pos_pub_id = rospy.Publisher('/{}/mouse_pose'.format(self.version), Pose ,queue_size=10)
         self.rate = rospy.Rate(10)
 
     def get_mouse_pos(self, data):
@@ -49,22 +49,23 @@ class PositionCapture:
         blank_image = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
         cv2.imshow('Keyboard Input Window', blank_image)
+        print(f"hello current version is {self.version}")
+        time.sleep(1)
+        self.mouse_pos_pub_id = rospy.Publisher('/{}/mouse_pose'.format(self.version), Pose ,queue_size=10)
 
         while not rospy.is_shutdown():
-            self.version = self.check_version()
             cv2.putText(blank_image, str(self.version), (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2, cv2.LINE_AA)
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord('r'):  
                 if self.status == "notrecording":
-                    print("hello")
-                    rospy.loginfo('Recording started for rosbag:{}')
+                    rospy.loginfo('Recording started for rosbag:{}'.format(self.version))
                     self.start_rosbag()
                     blank_image[:, :] = [0, 255, 0]
                     self.status = "recording"
 
             elif key == ord('s'): 
-                rospy.loginfo('Recording stopped for rosbag:{}')
+                rospy.loginfo('Recording stopped for rosbag:{}'.format(self.version))
                 self.stop_rosbag()
                 blank_image[:, :] = [0, 0, 255]
                 self.status = "notrecording"
@@ -82,8 +83,8 @@ class PositionCapture:
 
         if not os.path.exists(self.rosbag_path):
             os.makedirs(self.rosbag_path)
-
         try:
+            time.sleep(0.1)
             self.rosbag_process = subprocess.Popen(['rosbag', 'record', '-o', self.rosbag_path, '/{}/mouse_pose'.format(self.version)])
             rospy.loginfo('ROS bag recording started.')
         except Exception as e:
@@ -125,6 +126,7 @@ class PositionCapture:
             rospy.logerr('Error stopping ROS bag recording: {}'.format(str(e)))
 
     def start(self):
+        self.version = self.check_version()
         self.command_capture()
 
 if __name__ == '__main__':
