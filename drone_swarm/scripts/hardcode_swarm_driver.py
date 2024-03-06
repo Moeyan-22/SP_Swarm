@@ -49,7 +49,7 @@ class SwarmDriver:
 
 
     def get_rosbag(self):
-        self.bag_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/final/rosbag{}.bag".format(self.rosbag_id)
+        self.bag_file_path = "/home/moe/catkin_ws/src/drone_swarm/rosbag/final/rosbag{}.bag".format(self.rosbag_id)
         try:
             playback_rate = 100
             command = ['rosbag', 'play', '-r', str(playback_rate), self.bag_file_path]

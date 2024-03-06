@@ -20,7 +20,7 @@ class PositionCapture:
 
         self.version = 0
         self.status = "notrecording"
-        self.version_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/version.txt"
+        self.version_file_path = "/home/moe/catkin_ws/src/drone_swarm/rosbag/version.txt"
         self.mouse_subscriber = rospy.Subscriber('/mouse_pose', Pose, lambda data: self.get_mouse_pos(data), queue_size=10)
         self.rate = rospy.Rate(10)
 
@@ -76,7 +76,7 @@ class PositionCapture:
 
         
     def start_rosbag(self):
-        self.rosbag_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/rosbag{}".format(self.version)
+        self.rosbag_path = "/home/moe/catkin_ws/src/drone_swarm/rosbag/rosbag{}".format(self.version)
 
         if not os.path.exists(self.rosbag_path):
             os.makedirs(self.rosbag_path)
@@ -93,8 +93,8 @@ class PositionCapture:
                 self.rosbag_process.send_signal(signal.SIGINT)
                 self.rosbag_process.wait()
                 rospy.loginfo('ROS bag recording stopped.')
-                rm_rosbag_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/rosbag{}".format(self.version)
-                edit_rosbag = "/home/swarm/catkin_ws/src/drone_swarm/rosbag"
+                rm_rosbag_path = "/home/moe/catkin_ws/src/drone_swarm/rosbag/rosbag{}".format(self.version)
+                edit_rosbag = "/home/moe/catkin_ws/src/drone_swarm/rosbag"
 
                 if os.path.exists(rm_rosbag_path):
                     shutil.rmtree(rm_rosbag_path)

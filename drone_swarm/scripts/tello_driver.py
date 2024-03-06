@@ -60,7 +60,7 @@ class DroneNode:
 
 
         #kills any previously running pid
-        script_path = '/home/swarm/catkin_ws/src/drone_swarm/cleanup/kill_processes.sh'
+        script_path = '/home/moe/catkin_ws/src/drone_swarm/cleanup/kill_processes.sh'
         subprocess.run(['bash', script_path, str(self.local_port)])
         print("killed old pid on port {}".format(self.local_port))
         time.sleep(0.1)
