@@ -120,13 +120,16 @@ class SwarmDriver:
             launch_file = "hardcode_drone.launch"
             launch_files = []
 
+            formatted_ip = '192.168.0.1{:02}'.format(num)
+            formatted_port = '90{:02}'.format(num)
+
 
             cli_args = ['drone_swarm',
                         launch_file,
                         'name:=tello{}'.format(num),
                         'id:={}'.format(num),
-                        'drone_ip:=192.168.0.10{}'.format(num),
-                        'local_port:=901{}'.format(num),
+                        'drone_ip:={}'.format(formatted_ip),
+                        'local_port:={}'.format(formatted_port),
                         'group:={}'.format(self.group),
                         'target:={}'.format(self.pass_processed_rosbag_data()),                        
                         ]
@@ -142,18 +145,15 @@ class SwarmDriver:
             
     def pass_processed_rosbag_data(self):
         
-        """
-                hardcoded_instructions = [
+        hardcoded_instructions = [
             '50 10',
             '0 200',
             '-10 20',
             '0 45',
             '0 0'
         ]
-                return json.dumps(hardcoded_instructions)
-        
-        """
-        
+
+        #return json.dumps(hardcoded_instructions)
         return json.dumps(self.str_data)
 
     def start(self):

@@ -37,7 +37,7 @@ class DroneNode:
     def __init__(self):
 
 
-        rospy.init_node('drone', anonymous=True)
+        rospy.init_node('drone_driver', anonymous=True)
         
         self.name = rospy.get_param('~name', 'tello')
         self.id = rospy.get_param('~id', 0)

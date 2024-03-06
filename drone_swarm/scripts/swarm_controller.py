@@ -5,6 +5,7 @@ import roslaunch
 import time
 from std_msgs.msg import Int32
 import threading
+import json
 
 
 class SwarmController:
@@ -14,12 +15,18 @@ class SwarmController:
         
         rospy.init_node('Swarm_Controller', anonymous=True)
         
-        self.rosbag_id_1 = rospy.get_param('~rosbag_id', 0)
-        self.rosbag_id_2 = rospy.get_param('~rosbag_id', 0)
+        self.rosbag_ids_raw = rospy.get_param('~rosbag_ids', '[]')
+        self.groups_raw = rospy.get_param('~groups', '[]')
+        self.drone_in_groups_raw = rospy.get_param('~drone_nums', '[]')
 
-        self.rosbag_ids = [self.rosbag_id_1, self.rosbag_id_2]
-        self.groups = ['A','B']
-        self.drone_in_groups = [5,5]
+        self.rosbag_ids = json.loads(self.rosbag_ids_raw)
+        self.groups = json.loads(self.groups_raw)
+        self.drone_in_groups = json.loads(self.drone_in_groups_raw)
+
+
+
+
+
 
         self.takeoff_pub_A = rospy.Publisher('/A/takeoff_command',Int32, queue_size=10)
         self.takeoff_pub_B = rospy.Publisher('/B/takeoff_command', Int32, queue_size=10)
