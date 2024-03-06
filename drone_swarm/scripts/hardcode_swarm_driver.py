@@ -51,7 +51,7 @@ class SwarmDriver:
     def get_rosbag(self):
         self.bag_file_path = "/home/swarm/catkin_ws/src/drone_swarm/rosbag/final/rosbag{}.bag".format(self.rosbag_id)
         try:
-            playback_rate = 10
+            playback_rate = 100
             command = ['rosbag', 'play', '-r', str(playback_rate), self.bag_file_path]
             process = subprocess.Popen(command)
             process.wait()
@@ -96,7 +96,7 @@ class SwarmDriver:
         a = -1
         while not rospy.is_shutdown():
             current_sequence = []
-            if i == 3:
+            if i == 10:
                 if a != 1:
                     current_sequence.append(a + 1)
                     a += 1

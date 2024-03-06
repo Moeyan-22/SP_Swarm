@@ -4,9 +4,6 @@ import rospy
 from std_msgs.msg import String
 from drone_swarm.msg import Array
 from std_msgs.msg import Int32
-
-
-
 import socket
 import threading
 import subprocess

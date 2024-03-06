@@ -37,8 +37,7 @@ class PositionCapture:
             return 0
 
     def update_version(self):
-        current_version = self.check_version()
-        new_version = current_version + 1
+        new_version = self.version + 1
 
         with open(self.version_file_path, 'w') as file:
             file.write(str(new_version))
@@ -49,8 +48,6 @@ class PositionCapture:
         blank_image = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
         cv2.imshow('Keyboard Input Window', blank_image)
-        print(f"hello current version is {self.version}")
-        time.sleep(1)
         self.mouse_pos_pub_id = rospy.Publisher('/{}/mouse_pose'.format(self.version), Pose ,queue_size=10)
 
         while not rospy.is_shutdown():
@@ -84,7 +81,6 @@ class PositionCapture:
         if not os.path.exists(self.rosbag_path):
             os.makedirs(self.rosbag_path)
         try:
-            time.sleep(0.1)
             self.rosbag_process = subprocess.Popen(['rosbag', 'record', '-o', self.rosbag_path, '/{}/mouse_pose'.format(self.version)])
             rospy.loginfo('ROS bag recording started.')
         except Exception as e:

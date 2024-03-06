@@ -28,7 +28,7 @@ class TurtleSim:
         
         self.root = tk.Tk()
         self.root.title('Turtle Controller')
-        self.canvas = ScrolledCanvas(self.root, width=1000, height=2000)
+        self.canvas = ScrolledCanvas(self.root, width=1000, height=1000) #1:2 scale
         self.canvas.pack()
         self.canvas.bind("<Motion>", self.mouse_drag_callback)
         self.mouse_pos_pub = rospy.Publisher('mouse_pose', Pose, queue_size=10)

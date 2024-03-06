@@ -71,8 +71,12 @@ class DroneController:
 
     def execute_takeoff(self):
         self.cmd_queue.put("command")
+        self.cmd_queue.put("command")
+        self.cmd_queue.put("mon")
         self.cmd_queue.put("mon")
         self.cmd_queue.put("takeoff")
+        self.cmd_queue.put("takeoff")
+
 
 
     def get_uwb(self, data):
@@ -91,10 +95,10 @@ class DroneController:
     def positioning(self):
         rate = rospy.Rate(5)
 
-        print(self.target)
+        #print(self.target)
         for target in self.target:
-            print(target)
-            while True:
+            #print(target)
+            while not rospy.is_shutdown():
                 point = Point()
                 point.x = 0
                 point.y = 0
@@ -118,7 +122,7 @@ class DroneController:
 
                 dist = np.linalg.norm(target_point - current_point)
 
-                print(f"error x:{error_x} error y:{error_y} dist: {dist}")
+                #print(f"error x:{error_x} error y:{error_y} dist: {dist}")
 
                 if dist < 5:
                     break
