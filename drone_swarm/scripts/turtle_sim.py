@@ -7,6 +7,7 @@ from std_msgs.msg import String
 import tkinter as tk
 from turtle import RawTurtle, ScrolledCanvas
 from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import PoseStamped
 import time
 
 
@@ -33,6 +34,38 @@ class TurtleSim:
         self.canvas.bind("<Motion>", self.mouse_drag_callback)
         self.mouse_pos_pub = rospy.Publisher('mouse_pose', Pose, queue_size=10)
         self.left_button_held = False
+
+        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node0', PoseStamped, self.get_uwb_coords, queue_size=10)
+
+
+    def get_uwb_coords(self, data):
+
+        scale_factor = 1
+        x_offset = 150
+        y_offset = 300
+        draw_uwb = True
+
+        x_value = data.pose.position.x
+        y_value = data.pose.position.y
+
+        x_value = round(x_value * 100 * scale_factor - x_offset, 4)
+        y_value = -round(y_value * 100 * scale_factor - y_offset, 4)
+
+        print(f"x value {x_value}, y value {y_value}")
+
+
+
+        if draw_uwb == True:
+            radius = 5
+            self.canvas.create_oval(
+                x_value - radius, y_value - radius,
+                x_value + radius, y_value + radius,
+                fill="blue"
+            )
+
+            self.root.update()
+
+
 
     def edit_turtle_starting_position(self):
         for i in range(self.total_turtle):

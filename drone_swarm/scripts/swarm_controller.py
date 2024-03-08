@@ -38,7 +38,7 @@ class SwarmController:
         launch_files = []
         cli_args = []
 
-        for num in range(len(self.groups)): #only applicable till 9 drones
+        for num in range(len(self.groups)):
             uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
             roslaunch.configure_logging(uuid)
             if num%2 == 0 or num == 0:

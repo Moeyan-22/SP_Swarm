@@ -25,13 +25,20 @@ class SwarmDriver:
         self.group = rospy.get_param('~group', 'A')
         self.drone_num = rospy.get_param('~drone_num', 1)
         self.rosbag_id = rospy.get_param('~rosbag_id', 1)
+        self.drone_data = [
+            ['0','192.168.0.100', '9010'],
+            ['1','192.168.0.102', '9011'],
+            ['2','192.168.0.103', '9012'],
+            ['3','192.168.0.104', '9013'],
+            ['4','192.168.0.105', '9014'],
+        ]
 
         self.takeoff = 0
         self.bag_file_path = ""
         self.rosbag_iteration = 0
         self.rosbag_data = np.array([])
         self.sliced_data = []
-        self.slicing_rate = 5
+        self.slicing_rate = 35
         self.uuid = ""
         self.mpad_from_drones = 0
         self.known_mpad = [0]
@@ -45,7 +52,7 @@ class SwarmDriver:
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
-        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+        self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
 
 
     def get_rosbag(self):
@@ -109,19 +116,61 @@ class SwarmDriver:
             i += 1
             time.sleep(1)
 
+    def start_uwb(self):
+
+        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+        roslaunch.configure_logging(uuid)
+
+        launch_file = "linktrack_rviz.launch"
+        launch_files = []
+
+        cli_args = ['nlink_parser', launch_file]
+        roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
+        
+        launch_files=[(roslaunch_file, None)]
+
+        parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
+
+        parent.start()
+
+
+    
+    def start_uwb_tf(self):
+
+        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+        roslaunch.configure_logging(uuid)
+
+        launch_file = "linktrack.launch"
+        launch_files = []
+
+        cli_args = ['nlink_parser', launch_file]
+        roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
+        
+        launch_files=[(roslaunch_file, None)]
+
+        parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
+
+        parent.start()
+
+
+
+
+
+
+
 
     def pass_launch_args(self):
 
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
 
-        for num in range(self.drone_num): #only applicable till 9 drones
+        for num in range(self.drone_num):
             
             launch_file = "hardcode_drone.launch"
             launch_files = []
 
-            formatted_ip = '192.168.0.1{:02}'.format(num)
-            formatted_port = '90{:02}'.format(num)
+            formatted_ip = self.drone_data[num][1]
+            formatted_port = self.drone_data[num][2]
 
 
             cli_args = ['drone_swarm',
@@ -145,18 +194,20 @@ class SwarmDriver:
             
     def pass_processed_rosbag_data(self):
         
-        hardcoded_instructions = [
-            '50 10',
-            '0 200',
-            '-10 20',
-            '0 45',
-            '0 0'
-        ]
+        #hardcoded_instructions = [
+        #    '148 305',
+        #    '280 553',
+        #    '114 101'
+        #]
 
         #return json.dumps(hardcoded_instructions)
+        print(f"hello, this is the data {self.str_data}")
         return json.dumps(self.str_data)
 
     def start(self):
+        self.start_uwb()
+        time.sleep(2)
+        self.start_uwb_tf()
         self.get_rosbag()
         self.pass_launch_args()
         time.sleep(2)

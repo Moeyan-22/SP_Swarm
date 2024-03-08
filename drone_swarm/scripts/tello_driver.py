@@ -47,7 +47,7 @@ class DroneNode:
         self.response = ''
         self.current_mpad = -1
         self.known_mpad = [0]
-        self.rate = rospy.Rate(15)
+        self.rate = rospy.Rate(20)
         self.rescue = False
         self.actioned = False
 
@@ -76,23 +76,19 @@ class DroneNode:
 
     def send_command(self, command = ''):
         if self.rescue == False:
-            #if command.data != "mid?" and command.data != "rc 0 0 0 0":
-            #    rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
+            if command.data != "mid?" and command.data != "rc 0 0 0 0":
+                rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
             self.send(command.data)
             self.action_pub.publish(command)
         
     def rescue_action_1(self):
         self.send('rc 0 0 0 0')
         self.send('stop')
-        time.sleep(1)
         self.send('land')
 
     def rescue_action_2(self):
         self.send('rc 0 0 0 0')
         self.send('stop')
-        time.sleep(1)
-        self.send('go 100 0 0 10 {}'.format(self.current_mpad))
-        time.sleep(1)
         self.send('land')
 
  
@@ -165,15 +161,14 @@ class DroneNode:
 
 
     def start(self):
-        if id != 1:
-            response_thread = threading.Thread(target=self.receive_command)
-            response_thread.start()
+        response_thread = threading.Thread(target=self.receive_command)
+        response_thread.start()
 
-            time.sleep(1)
+        time.sleep(1)
 
-            self.update_mpad()
+        self.update_mpad()
 
-            rospy.spin()
+        rospy.spin()
 
 
 

@@ -4,5 +4,5 @@
 
     <node name="sim_node" pkg="drone_swarm" type="turtle_sim.py" output="screen"/>
 
-    <node name="capture_node" pkg="drone_swarm" type="position_capture.py" output="screen"/>
+    <node name="capture_node" pkg="drone_swarm" type="uwb_position_capture.py" output="screen"/>
 </launch>

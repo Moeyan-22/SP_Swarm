@@ -9,6 +9,9 @@ from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
 from drone_swarm.msg import Array
+from geometry_msgs.msg import PoseStamped
+import time
+
 
 class DroneController:
 
@@ -57,7 +60,7 @@ class DroneController:
 
         
         self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
-        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_uwb, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
 
@@ -71,17 +74,17 @@ class DroneController:
 
     def execute_takeoff(self):
         self.cmd_queue.put("command")
-        self.cmd_queue.put("command")
         self.cmd_queue.put("mon")
-        self.cmd_queue.put("mon")
-        self.cmd_queue.put("takeoff")
         self.cmd_queue.put("takeoff")
 
 
 
     def get_uwb(self, data):
-        self.x = data.x
-        self.y = data.y
+        x_value = data.pose.position.x
+        y_value = data.pose.position.y
+
+        self.x_value = round(x_value * 100, 4)
+        self.y_value = round(y_value * 100, 4)
 
     def process_target_raw(self):
         self.target = self.target_raw
@@ -95,25 +98,25 @@ class DroneController:
     def positioning(self):
         rate = rospy.Rate(5)
 
-        #print(self.target)
+        print(self.target)
         for target in self.target:
             #print(target)
             while not rospy.is_shutdown():
                 point = Point()
                 point.x = 0
                 point.y = 0
-                alpha = 0.33
+                alpha = 0.5
                 rc_command = ""
                 numbers = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
                 target_point = np.array([numbers[0], numbers[1]])
-                current_point = np.array([self.x, self.y])
+                current_point = np.array([self.x_value, self.y_value])
 
                 error_x = target_point[0] - current_point[0]
                 error_y = target_point[1] - current_point[1]
 
                 #print(f"error x: {error_x} error y: {error_y}")
 
-                max_output = 100  # Adjust as needed
+                max_output = 70  # Adjust as needed
                 control_x = np.clip(error_x, -max_output, max_output)
                 control_y = np.clip(error_y, -max_output, max_output)
 
@@ -122,9 +125,9 @@ class DroneController:
 
                 dist = np.linalg.norm(target_point - current_point)
 
-                #print(f"error x:{error_x} error y:{error_y} dist: {dist}")
+                print(f"current x:{self.x_value}, current y:{self.y_value}, target:{target} error x:{error_x} error y:{error_y} dist: {dist}")
 
-                if dist < 5:
+                if dist < 20:
                     break
 
                 point.x = control_x
@@ -176,8 +179,7 @@ class DroneController:
                     i = 0
 
     def start(self):
-        if self.id != 1:
-            self.timing_control()
+        self.timing_control()
 
 
 
