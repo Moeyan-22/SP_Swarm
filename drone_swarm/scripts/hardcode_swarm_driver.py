@@ -14,6 +14,8 @@ from geometry_msgs.msg import Pose
 import time
 import string
 import threading
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # For 3D scatter plot
 
 
 class SwarmDriver:
@@ -38,7 +40,7 @@ class SwarmDriver:
         self.rosbag_iteration = 0
         self.rosbag_data = np.array([])
         self.sliced_data = []
-        self.slicing_rate = 70
+        self.slicing_rate = 70 #70
         self.uuid = ""
         self.mpad_from_drones = 0
         self.known_mpad = [0]
@@ -86,8 +88,29 @@ class SwarmDriver:
 
 
     def process_rosbag_data(self):
+
         self.sliced_data = self.rosbag_data[::self.slicing_rate]
         self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')  # For 3D scatter plot
+
+        x_data = self.sliced_data[:, 0]
+        y_data = self.sliced_data[:, 1]
+
+        x_rosbag = self.rosbag_data[:, 0]
+        y_rosbag = self.rosbag_data[:, 1]
+
+        ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
+        ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha = 0.01)
+
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_title('Scatter Plot of Sliced Data')
+
+        # Show the plot
+        plt.show()
+
 
 
 
