@@ -4,10 +4,12 @@ import rospy
 from std_msgs.msg import String
 from drone_swarm.msg import Array
 from std_msgs.msg import Int32
+from geometry_msgs.msg import PoseStamped
 import socket
 import threading
 import subprocess
 import time
+
 
 class DroneNode:
 
@@ -50,13 +52,19 @@ class DroneNode:
         self.rate = rospy.Rate(20)
         self.rescue = False
         self.actioned = False
+        self.x_value = 0
+        self.y_value = 0
 
 
 
         self.action_pub = rospy.Publisher('/{}/action'.format(self.name), String, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad', Array, queue_size=10)
+        self.land_pub = rospy.Publisher('/{}/land_data'.format(self.name), Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad_database', Array, self.get_mpad, queue_size=10)
         self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
+
+
 
 
         #kills any previously running pid
@@ -80,17 +88,31 @@ class DroneNode:
                 rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
             self.send(command.data)
             self.action_pub.publish(command)
+
+    def get_uwb(self, data):
+        x_value = data.pose.position.x
+        y_value = data.pose.position.y
+        self.x_value = round(x_value * 100, 4)
+        self.y_value = round(y_value * 100, 4)
         
     def rescue_action_1(self):
-        self.send('rc 0 0 0 0')
-        self.send('stop')
-        self.send('land')
+        print("land 1")
+        land_x = self.x_value
+        land_y = self.y_value
+
+        for i in range(10):
+            self.land_pub.publish([int(land_x), int(land_y)])
+            time.sleep(1)
+
 
     def rescue_action_2(self):
-        self.send('rc 0 0 0 0')
-        self.send('stop')
-        self.send('land')
+        print("land 2")
+        land_x = self.x_value
+        land_y = self.y_value
 
+        for i in range(10):
+            self.land_pub.publish([int(land_x), int(land_y)])
+            time.sleep(1)
  
 
     def receive_command(self):

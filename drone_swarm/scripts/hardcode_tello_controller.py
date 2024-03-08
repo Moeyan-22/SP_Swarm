@@ -52,6 +52,13 @@ class DroneController:
         self.current_sequence = 0
         self.x = 0
         self.y = 0
+        self.land_x = 0
+        self.land_y = 0
+        self.i = 0
+        self.land_data = []
+        self.exit_positioning = 0
+
+
         self.total_steps = 2
         self.step = 1
         self.step_interval = rospy.Rate(1/0.1) 
@@ -63,6 +70,7 @@ class DroneController:
         self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
+        self.land_sub = rospy.Subscriber('/{}/land_data'.format(self.name), Array, self.get_land_data, queue_size=10)
 
 
     def get_takeoff_command(self, data):
@@ -75,7 +83,17 @@ class DroneController:
     def execute_takeoff(self):
         self.cmd_queue.put("command")
         self.cmd_queue.put("mon")
+        self.cmd_queue.put("speed 100")
         self.cmd_queue.put("takeoff")
+
+
+
+    def execute_landing(self):
+        self.cmd_queue = queue.Queue()
+        self.target = []
+        self.target = [f'{self.land_x} {self.land_y}']
+        self.exit_positioning = 1
+        print(f"hello my nigga, this is target now {self.target}")
 
 
 
@@ -85,6 +103,15 @@ class DroneController:
 
         self.x_value = round(x_value * 100, 4)
         self.y_value = round(y_value * 100, 4)
+
+    def get_land_data(self, data):
+        if self.i < 1:
+            self.land_data = data.data
+            self.land_x = self.land_data[0]
+            self.land_y = self.land_data[1]
+            self.execute_landing()
+            self.i += 1
+
 
     def process_target_raw(self):
         self.target = self.target_raw
@@ -100,7 +127,17 @@ class DroneController:
 
         print(self.target)
         for target in self.target:
-            #print(target)
+
+            if self.exit_positioning == 1:
+                print("gay nigga")
+                target = f"{self.land_x} {self.land_y}"
+                print(target)
+            
+            if self.exit_positioning == 2:
+                break
+            
+
+
             while not rospy.is_shutdown():
                 point = Point()
                 point.x = 0
@@ -130,6 +167,15 @@ class DroneController:
                 if dist < 20:
                     break
 
+                if dist < 20 and self.exit_positioning == 1:
+                    self.exit_positioning +=1
+                    break
+
+                if dist < 20 and self.exit_positioning == 2:
+                    self.exit_positioning += 3
+                    break
+
+
                 point.x = control_x
                 point.y = control_y
 
@@ -141,6 +187,9 @@ class DroneController:
                 self.cmd_queue.put(rc_command)
 
                 rate.sleep()
+
+        print("sexy nigga")
+        self.cmd_queue.put("land")
 
 
     def get_sequence(self, data):

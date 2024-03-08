@@ -1,6 +1,6 @@
 <launch>
   <arg name="group" default="A" />
-  <arg name="drone_num" default="3" />
+  <arg name="drone_num" default="1" />
   <arg name="rosbag_id" default="3" />
 
 

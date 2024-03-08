@@ -38,7 +38,7 @@ class SwarmDriver:
         self.rosbag_iteration = 0
         self.rosbag_data = np.array([])
         self.sliced_data = []
-        self.slicing_rate = 35
+        self.slicing_rate = 70
         self.uuid = ""
         self.mpad_from_drones = 0
         self.known_mpad = [0]
@@ -201,7 +201,7 @@ class SwarmDriver:
         #]
 
         #return json.dumps(hardcoded_instructions)
-        print(f"hello, this is the data {self.str_data}")
+        #print(f"hello, this is the data {self.str_data}")
         return json.dumps(self.str_data)
 
     def start(self):
