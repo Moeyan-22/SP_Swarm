@@ -67,6 +67,7 @@ class DroneController:
 
         
         self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
+        self.status_pub = rospy.Publisher('/status', Array, queue_size=10)
 
         #real uwb
         #self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
@@ -100,7 +101,6 @@ class DroneController:
         self.target = []
         self.target = [f'{self.land_x} {self.land_y}']
         self.exit_positioning = 1
-        print(f"hello my nigga, this is target now {self.target}")
 
 
 
@@ -140,6 +140,10 @@ class DroneController:
         rate = rospy.Rate(5)
 
         print(self.target)
+
+        total_target = len(self.target)
+        i = 1
+
         for target in self.target:
 
             if self.exit_positioning == 1:
@@ -147,9 +151,11 @@ class DroneController:
             
             if self.exit_positioning == 2:
                 break
+
+            percentage = int((i/total_target)*100)
+            stripped_number = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
+            self.status_pub.publish([self.id, stripped_number[0], stripped_number[1], percentage, 0])
             
-
-
             while not rospy.is_shutdown():
                 point = Point()
                 point.x = 0
@@ -159,6 +165,8 @@ class DroneController:
                 numbers = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
                 target_point = np.array([numbers[0], numbers[1]])
                 current_point = np.array([self.x_value, self.y_value])
+
+                
 
                 error_x = target_point[0] - current_point[0]
                 error_y = target_point[1] - current_point[1]
@@ -174,7 +182,7 @@ class DroneController:
 
                 dist = np.linalg.norm(target_point - current_point)
 
-                #print(f"current x:{self.x_value}, current y:{self.y_value}, target:{target} error x:{error_x} error y:{error_y} dist: {dist}")
+                #print(f"{self.name} current x:{self.x_value}, current y:{self.y_value}, target:{target}, error x:{error_x}, error y:{error_y}, dist: {dist}")
 
                 min_dist = 10 #20
 
@@ -202,7 +210,11 @@ class DroneController:
 
                 rate.sleep()
 
+            i += 1
+
+
         self.cmd_queue.put("land")
+        self.status_pub.publish([self.id, stripped_number[0], stripped_number[1], percentage, 1])
         time.sleep(2)
         rospy.signal_shutdown('Self-termination requested')
 

@@ -27,12 +27,33 @@ class SwarmDriver:
         self.group = rospy.get_param('~group', 'A')
         self.drone_num = rospy.get_param('~drone_num', 1)
         self.rosbag_id = rospy.get_param('~rosbag_id', 1)
+        
+        #inn the future make it a param
         self.drone_data = [
-            ['0','192.168.0.100', '9010'],
-            ['1','192.168.0.102', '9011'],
-            ['2','192.168.0.103', '9012'],
-            ['3','192.168.0.104', '9013'],
-            ['4','192.168.0.105', '9014'],
+            ['0','192.168.0.100', '9010', 'A'],
+            ['1','192.168.0.102', '9011', 'A'],
+            ['2','192.168.0.103', '9012', 'A'],
+            ['3','192.168.0.104', '9013', 'A'],
+            ['4','192.168.0.105', '9014', 'A'],
+            ['5','192.168.0.106', '9015', 'B'],
+            ['6','192.168.0.107', '9016', 'B'],
+            ['7','192.168.0.108', '9017', 'B'],
+            ['8','192.168.0.109', '9018', 'B'],
+            ['9','192.168.0.110', '9019', 'B']
+        ]
+
+        self.status = [
+            #['tello','group:','action','battery:']
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled',''],
+            ['','','uncalled','']
         ]
 
         self.takeoff = 0
@@ -40,20 +61,24 @@ class SwarmDriver:
         self.rosbag_iteration = 0
         self.rosbag_data = np.array([])
         self.sliced_data = []
-        self.slicing_rate = 10 #70
+        self.slicing_rate = 70 #70
         self.uuid = ""
         self.mpad_from_drones = 0
         self.known_mpad = [0]
         self.rate = rospy.Rate(20)
-        self.data = [0,0]
         self.str_data = []
         self.id_of_data = 0
         self.drone_that_has_published = []
+        self.id_status = 0
+        self.percentage_status = 0
+        self.landed_status = 0
+
 
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
+        self.status_sub = rospy.Subscriber('/status', Array, self.get_status, queue_size=10)
         
         #for uwb
         #self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
@@ -143,7 +168,6 @@ class SwarmDriver:
 
                 self.sequence_pub.publish(current_sequence)
                 time.sleep(1)
-                print(current_sequence)
 
     def start_uwb(self):
 
@@ -180,12 +204,6 @@ class SwarmDriver:
         parent = roslaunch.parent.ROSLaunchParent(uuid, launch_files)
 
         parent.start()
-
-
-
-
-
-
 
 
     def pass_launch_args(self):
@@ -245,12 +263,43 @@ class SwarmDriver:
         while not rospy.is_shutdown():
             self.publish_takeoff_command()
 
+    def get_status(self, data):
+        status_data = [0,0]
+        status_data = data.data
+        self.id_status = status_data[0]
+        self.percentage_status = status_data[3]
+        self.landed_status = status_data[4]
+
+        self.status[self.id_status][0] = "Tello:{}".format(self.id_status)
+        self.status[self.id_status][1] = "Group:{}".format(self.find_group(self.id_status))
+
+        if self.landed_status == 1:
+            self.status[self.id_status][2] = "landed"
+        else:
+            self.status[self.id_status][2] = "Path_Status:{}%".format(self.percentage_status)
+
+        self.status[self.id_status][3] = "Batt:{}%".format(self.find_batt(self.id_status))
+
+        
+
+    def find_group(self, id):
+        group = self.drone_data[id][3]
+        return group
+    
+    def find_batt(self, id): #update
+        return 0
+    
+    
+
+
 
     def get_mpad(self, data):
-        self.data = data.data
-        self.mpad_from_drones = self.data[1]
-        self.id_of_data = self.data[0]
+        mpad_data = [0,0]
+        mpad_data = data.data
+        self.mpad_from_drones = mpad_data[1]
+        self.id_of_data = mpad_data[0]
         self.update_mpad()
+
 
     def update_mpad(self):
         special = None
