@@ -69,31 +69,27 @@ class TurtleSim:
 
     def edit_turtle_starting_position(self):
         for i in range(self.total_turtle):
-            if i != 1 and i != 0:
                 self.turtle_starting_position[i][1] = -200 - (i-1)*50
                 self.turtle_starting_position[i][0] = -100
-            elif i == 0:
-                self.turtle_starting_position[i][1] = -200 - i*50
-                self.turtle_starting_position[i][0] = -100
+
 
 
     def create_turtle_objects(self):
         for i in range(self.total_turtle):
-            if i != 1:
-                turtle = RawTurtle(self.canvas)
-                turtle.speed(1)
-                turtle.shape("circle")
-                turtle.fillcolor("black")
-                turtle.penup()
-                turtle.goto(self.turtle_starting_position[i][0], self.turtle_starting_position[i][1])
-                turtle.pendown()
-                turtle.action = ''
+            turtle = RawTurtle(self.canvas)
+            turtle.speed(1)
+            turtle.shape("circle")
+            turtle.fillcolor("black")
+            turtle.penup()
+            turtle.goto(self.turtle_starting_position[i][0], self.turtle_starting_position[i][1])
+            turtle.pendown()
+            turtle.action = ''
             self.turtles.append(turtle)
             self.start_turtle(i)
             self.start_coords(i)
 
     def start_turtle(self, i):
-        turtle_action_subscriber = rospy.Subscriber('/{}/action'.format('tello' + str(i)), String, self.get_action, callback_args=(i), queue_size=10)
+        turtle_action_subscriber = rospy.Subscriber('/{}/cmd'.format('tello' + str(i)), String, self.get_action, callback_args=(i), queue_size=10)
         self.turtle_subscribers.append(turtle_action_subscriber)
 
     def get_action(self, data, i):
@@ -137,6 +133,8 @@ class TurtleSim:
                 self.turtles[i].fillcolor("red")
             elif command_received == "takeoff":
                 self.turtles[i].fillcolor("green")
+            elif command_received == "land":
+                self.turtles[i].fillcolor("blue")
             elif "rc" in command_received:
                 numbers = [int(s) for s in command_received.split() if s.lstrip('-').isdigit()]                
                 y_offset = numbers[0]

@@ -40,7 +40,7 @@ class SwarmDriver:
         self.rosbag_iteration = 0
         self.rosbag_data = np.array([])
         self.sliced_data = []
-        self.slicing_rate = 70 #70
+        self.slicing_rate = 10 #70
         self.uuid = ""
         self.mpad_from_drones = 0
         self.known_mpad = [0]
@@ -54,7 +54,13 @@ class SwarmDriver:
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
-        self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+        
+        #for uwb
+        #self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+       
+       #for sim
+        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+
 
 
     def get_rosbag(self):
@@ -89,27 +95,31 @@ class SwarmDriver:
 
     def process_rosbag_data(self):
 
+        visualise_data = True
+
         self.sliced_data = self.rosbag_data[::self.slicing_rate]
         self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')  # For 3D scatter plot
+        if visualise_data == True:
 
-        x_data = self.sliced_data[:, 0]
-        y_data = self.sliced_data[:, 1]
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')  # For 3D scatter plot
 
-        x_rosbag = self.rosbag_data[:, 0]
-        y_rosbag = self.rosbag_data[:, 1]
+            x_data = self.sliced_data[:, 0]
+            y_data = self.sliced_data[:, 1]
 
-        ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
-        ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha = 0.01)
+            x_rosbag = self.rosbag_data[:, 0]
+            y_rosbag = self.rosbag_data[:, 1]
 
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_title('Scatter Plot of Sliced Data')
+            ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
+            ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha = 0.01)
 
-        # Show the plot
-        plt.show()
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_title('Scatter Plot of Sliced Data')
+
+            # Show the plot
+            plt.show()
 
 
 
@@ -228,9 +238,9 @@ class SwarmDriver:
         return json.dumps(self.str_data)
 
     def start(self):
-        self.start_uwb()
-        time.sleep(2)
-        self.start_uwb_tf()
+        #self.start_uwb()
+        #time.sleep(2)
+        #self.start_uwb_tf()
         self.get_rosbag()
         self.pass_launch_args()
         time.sleep(2)

@@ -57,7 +57,6 @@ class DroneNode:
 
 
 
-        self.action_pub = rospy.Publisher('/{}/action'.format(self.name), String, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad', Array, queue_size=10)
         self.land_pub = rospy.Publisher('/{}/land_data'.format(self.name), Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad_database', Array, self.get_mpad, queue_size=10)
@@ -79,15 +78,17 @@ class DroneNode:
     def send(self, message = ''):
         try:
             self.sock.sendto(message.encode(), (self.drone_ip, 8889))
+            if message == 'land':
+                time.sleep(2)
+                rospy.signal_shutdown('Self-termination requested')
         except Exception as e:
             rospy.logerr("Error sending message: " + str(e))
 
     def send_command(self, command = ''):
         if self.rescue == False:
-            if command.data != "mid?" and command.data != "rc 0 0 0 0":
-                rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
+            #if command.data != "mid?" and command.data != "rc 0 0 0 0":
+            #    rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
             self.send(command.data)
-            self.action_pub.publish(command)
 
     def get_uwb(self, data):
         x_value = data.pose.position.x
@@ -121,7 +122,7 @@ class DroneNode:
             self.response = self.response.decode(encoding='utf-8').strip()
             #rospy.loginfo(f"Received reply from drone: {self.response}")
 
-            if self.response != "ok":
+            if self.response != "ok" and self.response != "error":
                 self.current_mpad = int(self.response)
             self.rate.sleep()
 

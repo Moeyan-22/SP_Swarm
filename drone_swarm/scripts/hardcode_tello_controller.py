@@ -67,7 +67,14 @@ class DroneController:
 
         
         self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
-        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
+
+        #real uwb
+        #self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
+
+        #simulation uwb
+        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_fake_uwb, queue_size=10)
+
+
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
         self.land_sub = rospy.Subscriber('/{}/land_data'.format(self.name), Array, self.get_land_data, queue_size=10)
@@ -104,6 +111,13 @@ class DroneController:
         self.x_value = round(x_value * 100, 4)
         self.y_value = round(y_value * 100, 4)
 
+    def get_fake_uwb(self, data):
+        x_value = data.x
+        y_value = data.y
+
+        self.x_value = x_value
+        self.y_value = y_value
+
     def get_land_data(self, data):
         if self.i < 1:
             self.land_data = data.data
@@ -129,9 +143,7 @@ class DroneController:
         for target in self.target:
 
             if self.exit_positioning == 1:
-                print("gay nigga")
                 target = f"{self.land_x} {self.land_y}"
-                print(target)
             
             if self.exit_positioning == 2:
                 break
@@ -142,7 +154,7 @@ class DroneController:
                 point = Point()
                 point.x = 0
                 point.y = 0
-                alpha = 0.5
+                alpha = 0.2 #0.5
                 rc_command = ""
                 numbers = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
                 target_point = np.array([numbers[0], numbers[1]])
@@ -153,7 +165,7 @@ class DroneController:
 
                 #print(f"error x: {error_x} error y: {error_y}")
 
-                max_output = 70  # Adjust as needed
+                max_output = 100  #70
                 control_x = np.clip(error_x, -max_output, max_output)
                 control_y = np.clip(error_y, -max_output, max_output)
 
@@ -162,16 +174,18 @@ class DroneController:
 
                 dist = np.linalg.norm(target_point - current_point)
 
-                print(f"current x:{self.x_value}, current y:{self.y_value}, target:{target} error x:{error_x} error y:{error_y} dist: {dist}")
+                #print(f"current x:{self.x_value}, current y:{self.y_value}, target:{target} error x:{error_x} error y:{error_y} dist: {dist}")
 
-                if dist < 20:
+                min_dist = 10 #20
+
+                if dist < min_dist:
                     break
 
-                if dist < 20 and self.exit_positioning == 1:
+                if dist < min_dist and self.exit_positioning == 1:
                     self.exit_positioning +=1
                     break
 
-                if dist < 20 and self.exit_positioning == 2:
+                if dist < min_dist and self.exit_positioning == 2:
                     self.exit_positioning += 3
                     break
 
@@ -188,8 +202,9 @@ class DroneController:
 
                 rate.sleep()
 
-        print("sexy nigga")
         self.cmd_queue.put("land")
+        time.sleep(2)
+        rospy.signal_shutdown('Self-termination requested')
 
 
     def get_sequence(self, data):
