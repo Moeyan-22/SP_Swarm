@@ -130,24 +130,20 @@ class SwarmDriver:
         self.takeoff_command_pub.publish(takeoff_command)
         self.rate = rospy.Rate(1)
 
-    
     def sequencer(self):
-        i = 0
-        a = -1
-        while not rospy.is_shutdown():
-            current_sequence = []
-            if i == 10:
-                if a != 1:
-                    current_sequence.append(a + 1)
-                    a += 1
-                    i = 0
-            elif a == 1:
-                current_sequence.append(a + 1)
-                a += 1
-                i = 0
-            self.sequence_pub.publish(current_sequence)
-            i += 1
-            time.sleep(1)
+
+        current_sequence = []
+
+        time.sleep(3)
+
+        for i in range(self.drone_num):
+            for j in range(11):
+                if i not in current_sequence:
+                    current_sequence.append(i)
+
+                self.sequence_pub.publish(current_sequence)
+                time.sleep(1)
+                print(current_sequence)
 
     def start_uwb(self):
 
