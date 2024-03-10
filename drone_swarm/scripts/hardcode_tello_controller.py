@@ -15,36 +15,21 @@ import time
 
 class DroneController:
 
-    """
-    single Tello Edu Controller written by Moeyan-22
-
-    Contains Utility function for
-     - Sending commands to tello driver
-     - Creates Queue for commands that is executed every 2secs
-     - Listen and respond to takeoff command published in group topic
-     - Listen to seqeunce_command and starts only when index has been called
-     - Listens to uwb point message from appropriate topic
-     - Calculates and sends path finding commands
-     - sends "state?" commands alongside any message in queue
-
-    Launch Params:
-     - name 
-     - id
-     - group
-     - target (1D array)
-    
-    """
-
     def __init__(self):
+        
 
         rospy.init_node('drone_controller', anonymous=True)
-        self.cmd_queue = queue.Queue()
-
         self.name = rospy.get_param('~name', 'tello')
         self.id = int(rospy.get_param('~id', 0))
         self.group = rospy.get_param('~group', 'A')
         self.target_raw_string = rospy.get_param('~target', '[]')
         self.target_raw = json.loads(self.target_raw_string)
+
+
+        self.total_steps = 2
+        self.step = 1
+        self.step_interval = rospy.Rate(1/0.1) 
+
 
         self.target = []
         self.takeoff = 0
@@ -57,17 +42,14 @@ class DroneController:
         self.i = 0
         self.land_data = []
         self.exit_positioning = 0
+        self.cmd_queue = queue.Queue()
 
 
-        self.total_steps = 2
-        self.step = 1
-        self.step_interval = rospy.Rate(1/0.1) 
-        self.base_speed = 0.3
-
-
-        
         self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
         self.status_pub = rospy.Publisher('/status', Array, queue_size=10)
+        self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
+        self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
+        self.land_sub = rospy.Subscriber('/{}/land_data'.format(self.name), Array, self.get_land_data, queue_size=10)
 
         #real uwb
         #self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
@@ -75,10 +57,6 @@ class DroneController:
         #simulation uwb
         self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_fake_uwb, queue_size=10)
 
-
-        self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
-        self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
-        self.land_sub = rospy.Subscriber('/{}/land_data'.format(self.name), Array, self.get_land_data, queue_size=10)
 
 
     def get_takeoff_command(self, data):
@@ -88,12 +66,12 @@ class DroneController:
             self.execute_takeoff()
             self.takeoff += 1
 
+
     def execute_takeoff(self):
         self.cmd_queue.put("command")
         self.cmd_queue.put("mon")
         self.cmd_queue.put("speed 100")
         self.cmd_queue.put("takeoff")
-
 
 
     def execute_landing(self):
@@ -103,20 +81,23 @@ class DroneController:
         self.exit_positioning = 1
 
 
-
     def get_uwb(self, data):
+
         x_value = data.pose.position.x
         y_value = data.pose.position.y
 
         self.x_value = round(x_value * 100, 4)
         self.y_value = round(y_value * 100, 4)
 
+
     def get_fake_uwb(self, data):
+
         x_value = data.x
         y_value = data.y
 
         self.x_value = x_value
         self.y_value = y_value
+
 
     def get_land_data(self, data):
         if self.i < 1:
@@ -137,18 +118,15 @@ class DroneController:
 
         
     def positioning(self):
+
+        i = 1
         rate = rospy.Rate(5)
+        total_target = len(self.target)
 
         print(self.target)
-
-        total_target = len(self.target)
-        i = 1
-
         for target in self.target:
-
             if self.exit_positioning == 1:
                 target = f"{self.land_x} {self.land_y}"
-            
             if self.exit_positioning == 2:
                 break
 
@@ -166,8 +144,6 @@ class DroneController:
                 target_point = np.array([numbers[0], numbers[1]])
                 current_point = np.array([self.x_value, self.y_value])
 
-                
-
                 error_x = target_point[0] - current_point[0]
                 error_y = target_point[1] - current_point[1]
 
@@ -176,10 +152,8 @@ class DroneController:
                 max_output = 100  #70
                 control_x = np.clip(error_x, -max_output, max_output)
                 control_y = np.clip(error_y, -max_output, max_output)
-
                 control_x = alpha * control_x + (1 - alpha) * point.x
                 control_y = alpha * control_y + (1 - alpha) * point.y
-
                 dist = np.linalg.norm(target_point - current_point)
 
                 #print(f"{self.name} current x:{self.x_value}, current y:{self.y_value}, target:{target}, error x:{error_x}, error y:{error_y}, dist: {dist}")
@@ -188,15 +162,12 @@ class DroneController:
 
                 if dist < min_dist:
                     break
-
                 if dist < min_dist and self.exit_positioning == 1:
                     self.exit_positioning +=1
                     break
-
                 if dist < min_dist and self.exit_positioning == 2:
                     self.exit_positioning += 3
                     break
-
 
                 point.x = control_x
                 point.y = control_y
@@ -205,15 +176,12 @@ class DroneController:
                     rc_command = "rc {} {} 0 0".format(int(point.x), int(point.y))
                 else:
                     rc_command = "rc 0 0 0 0"
-
                 self.cmd_queue.put(rc_command)
-
                 rate.sleep()
-
             i += 1
-
-
         self.cmd_queue.put("land")
+        #self.reverse()
+        #self.traverse
         self.status_pub.publish([self.id, stripped_number[0], stripped_number[1], percentage, 1])
         time.sleep(2)
         rospy.signal_shutdown('Self-termination requested')
@@ -222,6 +190,7 @@ class DroneController:
     def get_sequence(self, data):
         self.current_sequence = data.data
         self.check_seqeunce()
+
 
     def check_seqeunce(self):
         if self.id in self.current_sequence and self.started == False:
