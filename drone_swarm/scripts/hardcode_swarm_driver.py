@@ -15,8 +15,7 @@ from geometry_msgs.msg import Pose
 import time
 import string
 import threading
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # For 3D scatter plot
+import plotly.graph_objects as go
 
 
 class SwarmDriver:
@@ -75,6 +74,8 @@ class SwarmDriver:
         self.id_status = 0
         self.percentage_status = 0
         self.landed_status = 0
+        self.selected_point = None
+        self.ok = False
 
 
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
@@ -128,26 +129,48 @@ class SwarmDriver:
         self.sliced_data = self.rosbag_data[::self.slicing_rate]
         self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
 
-        if visualise_data == True:
+        if visualise_data:
+            fig = go.Figure()
 
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')  # For 3D scatter plot
+            # Scatter plot for sliced data
+            scatter_sliced = fig.add_trace(go.Scatter(
+                x=self.sliced_data[:, 0],
+                y=self.sliced_data[:, 1],
+                mode='markers',
+                marker=dict(color='red', size=12),
+                text=[" ".join(map(str, row)) for row in self.sliced_data],  # Tag information
+                hoverinfo='text+x+y',  # Display text when hovering over points
+                name='Sliced Data'
+            ))
 
-            x_data = self.sliced_data[:, 0]
-            y_data = self.sliced_data[:, 1]
+            # Scatter plot for rosbag data
+            fig.add_trace(go.Scatter(
+                x=self.rosbag_data[:, 0],
+                y=self.rosbag_data[:, 1],
+                mode='markers',
+                marker=dict(color='red', size=8, opacity=0.1),
+                hoverinfo='skip',  # Do not display hover info for rosbag data
+                name='Rosbag Data'
+            ))
 
-            x_rosbag = self.rosbag_data[:, 0]
-            y_rosbag = self.rosbag_data[:, 1]
+            # Update layout for better interactivity
+            fig.update_layout(
+                xaxis=dict(title='X'),
+                yaxis=dict(title='Y'),
+                title='Scatter Plot of Sliced Data',
+                showlegend=True,
+            )
 
-            ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
-            ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha = 0.01)
-
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_title('Scatter Plot of Sliced Data')
+            # Enable dragging
+            scatter_sliced.update_traces(marker=dict(symbol="circle", line=dict(width=2)))
 
             # Show the plot
-            plt.show()
+            fig.show()
+
+            while not rospy.is_shutdown():
+                if self.ok == True:
+                    break
+                time.sleep(1)
 
 
 
@@ -258,10 +281,10 @@ class SwarmDriver:
         #self.start_uwb()
         #time.sleep(2)
         #self.start_uwb_tf()
+        self.show_status()
         self.get_rosbag()
         self.pass_launch_args()
         time.sleep(2)
-        self.show_status()
         sequencer_thread = threading.Thread(target=self.sequencer)
         sequencer_thread.start()
         while not rospy.is_shutdown():
@@ -278,9 +301,9 @@ class SwarmDriver:
         self.status[self.id_status][1] = "Group:{}".format(self.find_group(self.id_status))
 
         if self.landed_status == 1:
-            self.status[self.id_status][2] = "landed"
+            self.status[self.id_status][2] = "Status: Landed"
         else:
-            self.status[self.id_status][2] = "Path_Status:{}%".format(self.percentage_status)
+            self.status[self.id_status][2] = "Status:{}%".format(self.percentage_status)
 
         self.status[self.id_status][3] = "Batt:{}%".format(self.find_batt(self.id_status))
     
@@ -289,7 +312,10 @@ class SwarmDriver:
         get_status = True
 
         while get_status:
+            color = (0, 0, 255) if not self.ok else (0, 255, 0)
             img = np.zeros((350, 600, 3), dtype=np.uint8)
+            img[:, :] = color
+
             for i, status_row in enumerate(self.status):
                 tello_id = status_row[0]
 
@@ -298,11 +324,13 @@ class SwarmDriver:
                 cv2.putText(img, status_str, (10, 30 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
             cv2.imshow(self.window_name, img)
-            key = cv2.waitKey(100)  
+            self.key = cv2.waitKey(100)  
             rospy.Rate(10).sleep()
-            if key == ord('q'):
+            if self.key == ord('q'):
                 cv2.destroyAllWindows()
                 get_status = False
+            elif self.key == ord('a'):
+                self.ok = True
 
     def show_status(self):
         update_thread = threading.Thread(target=self.update_status)
