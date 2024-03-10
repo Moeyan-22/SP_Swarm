@@ -17,6 +17,7 @@ import string
 import threading
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # For 3D scatter plot
+import mplcursors
 
 
 class SwarmDriver:
@@ -131,7 +132,7 @@ class SwarmDriver:
         if visualise_data == True:
 
             fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')  # For 3D scatter plot
+            ax = fig.add_subplot(111) 
 
             x_data = self.sliced_data[:, 0]
             y_data = self.sliced_data[:, 1]
@@ -139,16 +140,35 @@ class SwarmDriver:
             x_rosbag = self.rosbag_data[:, 0]
             y_rosbag = self.rosbag_data[:, 1]
 
-            ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
-            ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha = 0.01)
+            scatter_sliced = ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
+            ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha=0.01)
 
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_title('Scatter Plot of Sliced Data')
 
-            # Show the plot
+            cursor = mplcursors.cursor(hover=True)
+            cursor.connect("add", lambda sel: self.on_point_select(sel, scatter_sliced))
             plt.show()
 
+    def on_point_select(self, sel, scatter):
+
+        index = sel.index
+
+        if index < len(self.sliced_data):
+            selected_point = self.sliced_data[index, :]
+        #print(f"Selected point index: {index}")
+        #print(f"Selected point coordinates: {selected_point}")
+
+        # Change the color of the selected point from red to green
+            scatter.set_facecolors(['green' if i == index else 'red' for i in range(len(scatter.get_offsets()))])
+            scatter.set_edgecolors(scatter.get_facecolors())        
+        else:
+            sel.annotation.set_text("")
+        
+
+
+       
 
 
 
@@ -258,10 +278,9 @@ class SwarmDriver:
         #self.start_uwb()
         #time.sleep(2)
         #self.start_uwb_tf()
+        self.show_status()
         self.get_rosbag()
         self.pass_launch_args()
-        time.sleep(2)
-        self.show_status()
         sequencer_thread = threading.Thread(target=self.sequencer)
         sequencer_thread.start()
         while not rospy.is_shutdown():
@@ -278,9 +297,9 @@ class SwarmDriver:
         self.status[self.id_status][1] = "Group:{}".format(self.find_group(self.id_status))
 
         if self.landed_status == 1:
-            self.status[self.id_status][2] = "landed"
+            self.status[self.id_status][2] = "Status:Landed"
         else:
-            self.status[self.id_status][2] = "Path_Status:{}%".format(self.percentage_status)
+            self.status[self.id_status][2] = "Status:{}%".format(self.percentage_status)
 
         self.status[self.id_status][3] = "Batt:{}%".format(self.find_batt(self.id_status))
     
