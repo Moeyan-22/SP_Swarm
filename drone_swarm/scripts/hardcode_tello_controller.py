@@ -139,7 +139,7 @@ class DroneController:
     def positioning(self):
         rate = rospy.Rate(5)
 
-        #print(self.target)
+        print(self.target)
 
         total_target = len(self.target)
         i = 1

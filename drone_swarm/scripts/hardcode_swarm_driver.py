@@ -76,6 +76,9 @@ class SwarmDriver:
         self.id_status = 0
         self.percentage_status = 0
         self.landed_status = 0
+        self.index = 0
+        self.change = 1
+        self.ok = False
 
 
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
@@ -94,6 +97,7 @@ class SwarmDriver:
 
     def get_rosbag(self):
         self.bag_file_path = "/home/moe/catkin_ws/src/drone_swarm/rosbag/final/rosbag{}.bag".format(self.rosbag_id)
+
         try:
             playback_rate = 100
             command = ['rosbag', 'play', '-r', str(playback_rate), self.bag_file_path]
@@ -123,54 +127,78 @@ class SwarmDriver:
 
 
     def process_rosbag_data(self):
-
-        visualise_data = True
-
         self.sliced_data = self.rosbag_data[::self.slicing_rate]
         self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
+
+
+    def visualise_data(self):
+        visualize_thread = threading.Thread(target=self.start_visualising)
+        visualize_thread.start()
+
+
+    def start_visualising(self):
+
+        visualise_data = True
 
         if visualise_data == True:
 
             fig = plt.figure()
             ax = fig.add_subplot(111) 
 
-            x_data = self.sliced_data[:, 0]
-            y_data = self.sliced_data[:, 1]
-
-            x_rosbag = self.rosbag_data[:, 0]
-            y_rosbag = self.rosbag_data[:, 1]
-
-            scatter_sliced = ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
-            ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha=0.01)
-
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_title('Scatter Plot of Sliced Data')
-
-            cursor = mplcursors.cursor(hover=True)
-            cursor.connect("add", lambda sel: self.on_point_select(sel, scatter_sliced))
+            plt.ion() 
             plt.show()
 
+            while not rospy.is_shutdown():
+                if self.change != 0:
+                    self.change = 0
+
+                    x_data = self.sliced_data[:, 0]
+                    y_data = self.sliced_data[:, 1]
+
+                    x_rosbag = self.rosbag_data[:, 0]
+                    y_rosbag = self.rosbag_data[:, 1]
+
+                    scatter_sliced = ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
+                    ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha=0.01)
+
+                    ax.set_xlabel('X')
+                    ax.set_ylabel('Y')
+                    ax.set_title('Scatter Plot of Sliced Data')
+
+                    cursor = mplcursors.cursor(hover=True)
+                    cursor.connect("add", lambda sel: self.on_point_select(sel, scatter_sliced))
+                    fig.canvas.mpl_connect('button_press_event', lambda event: self.on_click(event, scatter_sliced))
+                    print(self.sliced_data)
+                    self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
+                plt.pause(1)
+                time.sleep(0.5)
+
     def on_point_select(self, sel, scatter):
-
         index = sel.index
-
         if index < len(self.sliced_data):
             selected_point = self.sliced_data[index, :]
-        #print(f"Selected point index: {index}")
-        #print(f"Selected point coordinates: {selected_point}")
-
-        # Change the color of the selected point from red to green
+            self.index = index
             scatter.set_facecolors(['green' if i == index else 'red' for i in range(len(scatter.get_offsets()))])
             scatter.set_edgecolors(scatter.get_facecolors())        
         else:
             sel.annotation.set_text("")
+
+    def on_click(self, event, scatter):
+        if event.button == 1:  # Left mouse button
+
+            if 0 <= self.index < len(self.sliced_data):
+                x_data = self.sliced_data[:, 0]
+                y_data = self.sliced_data[:, 1]
+
+            scatter.remove()
+               
+            self.sliced_data[self.index][0] = event.xdata
+            self.sliced_data[self.index][1] = event.ydata
+            self.change = 2
+
+
+
         
-
-
-       
-
-
 
     def publish_takeoff_command(self): #hardcoded
         takeoff_command = Int32()
@@ -280,11 +308,15 @@ class SwarmDriver:
         #self.start_uwb_tf()
         self.show_status()
         self.get_rosbag()
-        self.pass_launch_args()
-        sequencer_thread = threading.Thread(target=self.sequencer)
-        sequencer_thread.start()
+        self.visualise_data()
         while not rospy.is_shutdown():
-            self.publish_takeoff_command()
+            if self.ok == True:
+                self.pass_launch_args()
+                time.sleep(2)
+                sequencer_thread = threading.Thread(target=self.sequencer)
+                sequencer_thread.start()
+                while not rospy.is_shutdown():
+                    self.publish_takeoff_command()
 
     def get_status(self, data):
         status_data = [0,0]
@@ -308,7 +340,11 @@ class SwarmDriver:
         get_status = True
 
         while get_status:
+
+            color = (0, 0, 255) if not self.ok else (0, 255, 0)
             img = np.zeros((350, 600, 3), dtype=np.uint8)
+            img[:, :] = color
+
             for i, status_row in enumerate(self.status):
                 tello_id = status_row[0]
 
@@ -317,11 +353,13 @@ class SwarmDriver:
                 cv2.putText(img, status_str, (10, 30 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
             cv2.imshow(self.window_name, img)
-            key = cv2.waitKey(100)  
+            self.key = cv2.waitKey(100)  
             rospy.Rate(10).sleep()
-            if key == ord('q'):
+            if self.key == ord('q'):
                 cv2.destroyAllWindows()
                 get_status = False
+            elif self.key == ord('a'):
+                self.ok = True
 
     def show_status(self):
         update_thread = threading.Thread(target=self.update_status)
