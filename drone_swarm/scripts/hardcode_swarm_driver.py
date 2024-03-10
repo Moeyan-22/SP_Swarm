@@ -6,6 +6,7 @@ import subprocess
 import roslaunch
 import numpy as np
 import json
+import cv2 
 from drone_swarm.msg import Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
@@ -44,17 +45,19 @@ class SwarmDriver:
 
         self.status = [
             #['tello','group:','action','battery:']
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled',''],
-            ['','','uncalled','']
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled',''],
+            ['uninitated','','uncalled','']
         ]
+
+        self.window_name = "status window"
 
         self.takeoff = 0
         self.bag_file_path = ""
@@ -258,6 +261,7 @@ class SwarmDriver:
         self.get_rosbag()
         self.pass_launch_args()
         time.sleep(2)
+        self.show_status()
         sequencer_thread = threading.Thread(target=self.sequencer)
         sequencer_thread.start()
         while not rospy.is_shutdown():
@@ -279,8 +283,30 @@ class SwarmDriver:
             self.status[self.id_status][2] = "Path_Status:{}%".format(self.percentage_status)
 
         self.status[self.id_status][3] = "Batt:{}%".format(self.find_batt(self.id_status))
+    
 
-        
+    def update_status(self):
+        get_status = True
+
+        while get_status:
+            img = np.zeros((350, 600, 3), dtype=np.uint8)
+            for i, status_row in enumerate(self.status):
+                tello_id = status_row[0]
+
+                # Include tello_id in the displayed status information
+                status_str = "Tello {}: {}".format(tello_id, " ".join(map(str, status_row[1:])))
+                cv2.putText(img, status_str, (10, 30 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+            cv2.imshow(self.window_name, img)
+            key = cv2.waitKey(100)  
+            rospy.Rate(10).sleep()
+            if key == ord('q'):
+                cv2.destroyAllWindows()
+                get_status = False
+
+    def show_status(self):
+        update_thread = threading.Thread(target=self.update_status)
+        update_thread.start()
 
     def find_group(self, id):
         group = self.drone_data[id][3]
