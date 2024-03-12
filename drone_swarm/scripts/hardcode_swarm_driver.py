@@ -36,8 +36,8 @@ class SwarmDriver:
             ['0','192.168.0.100', '9010', 'A'],
             ['1','192.168.0.102', '9011', 'A'],
             ['2','192.168.0.103', '9012', 'A'],
-            ['3','192.168.0.104', '9013', 'A'],
-            ['4','192.168.0.105', '9014', 'A'],
+            ['3','192.168.0.104', '9013', 'B'],
+            ['4','192.168.0.105', '9014', 'B'],
             ['5','192.168.0.106', '9015', 'B'],
             ['6','192.168.0.107', '9016', 'B'],
             ['7','192.168.0.108', '9017', 'B'],
@@ -48,16 +48,16 @@ class SwarmDriver:
 
         self.status = [
             #['tello','group:','action','battery:']
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled',''],
-            ['uninitated','','uncalled','']
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', ''],
+            ['uninitated','','uncalled','', '']
         ]
 
         self.window_name = "status window"
@@ -90,7 +90,7 @@ class SwarmDriver:
         
 
 
-        self.collision_pub = rospy.Publisher('/collision', Array, queue_size=10)
+        self.collision_pub = rospy.Publisher('/{}/collision'.format(self.group), Int32, queue_size=10)
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
@@ -246,10 +246,10 @@ class SwarmDriver:
 
         current_sequence = []
 
-        time.sleep(5)
+        time.sleep(1)
 
         for i in range(self.drone_num):
-            for j in range(16):
+            for j in range(2):
                 if i not in current_sequence:
                     current_sequence.append(i)
 
@@ -367,12 +367,14 @@ class SwarmDriver:
 
         if self.landed_status == 1:
             self.status[self.id_status][2] = "Status:Landed"
+            self.update_percentage(self.id_status, -1)
         else:
             self.status[self.id_status][2] = "Status:{}%".format(self.percentage_status)
+            self.update_percentage(self.id_status, self.percentage_status)
+
 
         self.status[self.id_status][3] = "Batt:{}%".format(self.find_batt(self.id_status))
 
-        self.update_percentage(self.id_status, self.percentage_status)
 
     
 
@@ -408,10 +410,26 @@ class SwarmDriver:
         self.check_percentage()
 
     def check_percentage(self):
-        for i in range(self.group_info_tuple[0]):
-            for a in range(self.group_count_info[i][0] - 1):
-                current_index = self.group_count_info[i][a+1]
-                if self.percentage[current_index + 1] == self.percentage[current_index]:
+        i = self.group_info_tuple.index(self.group) - 1
+        for a in range(self.group_count_info[i][0] - 1):
+            infront = self.group_count_info[i][a+1]
+            infront_percentage = self.percentage[infront]
+            behind = self.group_count_info[i][a+2]
+            behind_percentage = self.percentage[behind]
+            #print(f"group:{self.group_info_tuple[i+1]}, drone:{infront}, infront:{infront_percentage}, behind:{behind_percentage}")
+            if infront_percentage != -1 and infront_percentage != 100 and infront_percentage != 0:
+                if behind_percentage == infront_percentage:
+                    #print(f"tello {behind} is blocked by {infront}")
+                    self.status[behind][4] = "blocked"
+                    self.collision_pub.publish(behind)
+                else:
+                    self.status[behind][4] = ""
+                    self.collision_pub.publish(-1)
+            else:
+                self.status[behind][4] = ""
+                self.collision_pub.publish(-1)
+
+
                     
 
 

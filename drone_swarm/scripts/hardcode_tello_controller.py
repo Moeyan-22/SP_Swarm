@@ -57,6 +57,8 @@ class DroneController:
         self.i = 0
         self.land_data = []
         self.exit_positioning = 0
+        self.avoid = -1
+        self.stop_avoid = False
 
 
         self.total_steps = 2
@@ -79,6 +81,19 @@ class DroneController:
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
         self.land_sub = rospy.Subscriber('/{}/land_data'.format(self.name), Array, self.get_land_data, queue_size=10)
+        self.collision_sub = rospy.Subscriber('/{}/collision'.format(self.group), Int32, self.get_collision, queue_size=10)
+
+
+    def get_collision(self, data):
+        self.avoid = data.data
+        self.check_avoid()
+
+
+    def check_avoid(self):
+        if self.id == self.avoid:
+            self.stop_avoid = True
+            time.sleep(3)
+            self.stop_avoid = False
 
 
     def get_takeoff_command(self, data):
@@ -205,6 +220,11 @@ class DroneController:
                     rc_command = "rc {} {} 0 0".format(int(point.x), int(point.y))
                 else:
                     rc_command = "rc 0 0 0 0"
+
+                if self.stop_avoid == True:
+                    print(f"drone:{self.id} stopped")
+                    rc_command = "rc 0 0 0 0"
+
 
                 self.cmd_queue.put(rc_command)
 
