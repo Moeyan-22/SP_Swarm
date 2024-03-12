@@ -18,6 +18,7 @@ import threading
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # For 3D scatter plot
 import mplcursors
+import re
 
 
 class SwarmDriver:
@@ -44,6 +45,7 @@ class SwarmDriver:
             ['9','192.168.0.110', '9019', 'B']
         ]
 
+
         self.status = [
             #['tello','group:','action','battery:']
             ['uninitated','','uncalled',''],
@@ -59,6 +61,8 @@ class SwarmDriver:
         ]
 
         self.window_name = "status window"
+
+        self.percentage = [0,0,0,0,0,0,0,0,0,0]
 
         self.takeoff = 0
         self.bag_file_path = ""
@@ -79,8 +83,14 @@ class SwarmDriver:
         self.index = 0
         self.change = 1
         self.ok = False
+        self.group_counts = {}
+        self.group_indices = {}
+        self.group_info_tuple = []
+        self.group_count_info = []
+        
 
 
+        self.collision_pub = rospy.Publisher('/collision', Array, queue_size=10)
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
@@ -92,6 +102,32 @@ class SwarmDriver:
        
        #for sim
         self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+
+    def process_drone_data(self):
+        # Iterate through the drone data
+        for index, drone in enumerate(self.drone_data):
+            drone_id, drone_ip, drone_port, group = drone
+
+            # Update group count
+            if group in self.group_counts:
+                self.group_counts[group] += 1
+                self.group_indices[group].append(index)
+            else:
+                self.group_counts[group] = 1
+                self.group_indices[group] = [index]
+
+        # Create tuples with group information
+        num_of_groups = len(self.group_counts)
+        group_names = list(self.group_counts.keys())
+        self.group_info_tuple = [num_of_groups] + group_names
+
+        for group_name in group_names:
+            num_of_drones = self.group_counts[group_name]
+            drone_indices = self.group_indices[group_name]
+            self.group_count_info.append([num_of_drones] + drone_indices)
+
+        print("Group Information Tuple:", self.group_info_tuple)
+        print("Group Count Information:", self.group_count_info)
 
 
 
@@ -168,7 +204,7 @@ class SwarmDriver:
                     cursor = mplcursors.cursor(hover=True)
                     cursor.connect("add", lambda sel: self.on_point_select(sel, scatter_sliced))
                     fig.canvas.mpl_connect('button_press_event', lambda event: self.on_click(event, scatter_sliced))
-                    print(self.sliced_data)
+                    #print(self.sliced_data)
                     self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
                 plt.pause(1)
                 time.sleep(0.5)
@@ -210,10 +246,10 @@ class SwarmDriver:
 
         current_sequence = []
 
-        time.sleep(3)
+        time.sleep(5)
 
         for i in range(self.drone_num):
-            for j in range(11):
+            for j in range(16):
                 if i not in current_sequence:
                     current_sequence.append(i)
 
@@ -306,6 +342,7 @@ class SwarmDriver:
         #self.start_uwb()
         #time.sleep(2)
         #self.start_uwb_tf()
+        self.process_drone_data()
         self.show_status()
         self.get_rosbag()
         self.visualise_data()
@@ -334,32 +371,54 @@ class SwarmDriver:
             self.status[self.id_status][2] = "Status:{}%".format(self.percentage_status)
 
         self.status[self.id_status][3] = "Batt:{}%".format(self.find_batt(self.id_status))
+
+        self.update_percentage(self.id_status, self.percentage_status)
+
     
 
     def update_status(self):
         get_status = True
+        while not rospy.is_shutdown():
 
-        while get_status:
+            if get_status:
 
-            color = (0, 0, 255) if not self.ok else (0, 255, 0)
-            img = np.zeros((350, 600, 3), dtype=np.uint8)
-            img[:, :] = color
+                color = (0, 0, 255) if not self.ok else (0, 255, 0)
+                img = np.zeros((350, 600, 3), dtype=np.uint8)
+                img[:, :] = color
 
-            for i, status_row in enumerate(self.status):
-                tello_id = status_row[0]
+                for i, status_row in enumerate(self.status):
+                    tello_id = status_row[0]
 
-                # Include tello_id in the displayed status information
-                status_str = "Tello {}: {}".format(tello_id, " ".join(map(str, status_row[1:])))
-                cv2.putText(img, status_str, (10, 30 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                    # Include tello_id in the displayed status information
+                    status_str = "Tello {}: {}".format(tello_id, " ".join(map(str, status_row[1:])))
+                    cv2.putText(img, status_str, (10, 30 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
-            cv2.imshow(self.window_name, img)
-            self.key = cv2.waitKey(100)  
-            rospy.Rate(10).sleep()
-            if self.key == ord('q'):
-                cv2.destroyAllWindows()
-                get_status = False
-            elif self.key == ord('a'):
-                self.ok = True
+                cv2.imshow(self.window_name, img)
+                self.key = cv2.waitKey(100)  
+                rospy.Rate(10).sleep()
+
+                if self.key == ord('q'):
+                    cv2.destroyAllWindows()
+                    get_status = False
+                elif self.key == ord('a'):
+                    self.ok = True
+
+    def update_percentage(self, id, percentage_num):
+        self.percentage[id] = percentage_num
+        self.check_percentage()
+
+    def check_percentage(self):
+        for i in range(self.group_info_tuple[0]):
+            for a in range(self.group_count_info[i][0] - 1):
+                current_index = self.group_count_info[i][a+1]
+                if self.percentage[current_index + 1] == self.percentage[current_index]:
+                    
+
+
+
+        
+        
+            
 
     def show_status(self):
         update_thread = threading.Thread(target=self.update_status)
