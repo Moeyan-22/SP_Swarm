@@ -15,26 +15,6 @@ import time
 
 class DroneController:
 
-    """
-    single Tello Edu Controller written by Moeyan-22
-
-    Contains Utility function for
-     - Sending commands to tello driver
-     - Creates Queue for commands that is executed every 2secs
-     - Listen and respond to takeoff command published in group topic
-     - Listen to seqeunce_command and starts only when index has been called
-     - Listens to uwb point message from appropriate topic
-     - Calculates and sends path finding commands
-     - sends "state?" commands alongside any message in queue
-
-    Launch Params:
-     - name 
-     - id
-     - group
-     - target (1D array)
-    
-    """
-
     def __init__(self):
 
         rospy.init_node('drone_controller', anonymous=True)
@@ -73,10 +53,10 @@ class DroneController:
         self.status_pub = rospy.Publisher('/status', Array, queue_size=10)
 
         #real uwb
-        #self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
 
         #simulation uwb
-        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_fake_uwb, queue_size=10)
+        #self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_fake_uwb, queue_size=10)
 
 
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
@@ -176,7 +156,7 @@ class DroneController:
                 point = Point()
                 point.x = 0
                 point.y = 0
-                alpha = 0.2 #0.5
+                alpha = 0.5 #0.5
                 rc_command = ""
                 numbers = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
                 target_point = np.array([numbers[0], numbers[1]])
@@ -189,7 +169,7 @@ class DroneController:
 
                 #print(f"error x: {error_x} error y: {error_y}")
 
-                max_output = 100  #70
+                max_output = 70  #70
                 control_x = np.clip(error_x, -max_output, max_output)
                 control_y = np.clip(error_y, -max_output, max_output)
 
@@ -200,7 +180,7 @@ class DroneController:
 
                 #print(f"{self.name} current x:{self.x_value}, current y:{self.y_value}, target:{target}, error x:{error_x}, error y:{error_y}, dist: {dist}")
 
-                min_dist = 10 #20
+                min_dist = 22 #20
 
                 if dist < min_dist:
                     break
