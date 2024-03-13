@@ -1,14 +1,11 @@
 <launch>
-  <arg name="groups" default="[A,B]" />
-  <arg name="drone_nums" default="[5,5]" />
-  <arg name="rosbag_ids" default="[16,17]" />
 
+    <!-- Start the ROS core -->
+    <node name="roscore" pkg="ros" type="core" output="screen"/>
 
     <!-- Start the swarm_driver -->
-    <node name="swarm_test_controller_node" pkg="drone_swarm" type="swarm_controller.py" output="screen">
-      <param name="~groups" value="$(arg groups)"/>
-      <param name="~drone_nums" value="$(arg drone_nums)"/>
-      <param name="~rosbag_ids" value="$(arg rosbag_ids)"/>
+    <node name="swarm_controller_node" pkg="drone_swarm" type="swarm_controller.py" output="screen">
     </node>
+
 
 </launch>

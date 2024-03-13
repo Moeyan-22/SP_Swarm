@@ -1,13 +1,13 @@
 <launch>
 
-    <arg name="total_drone" default="5" />
+    <arg name="drone_data" default="[]" />
 
     <!-- Start the ROS core -->
     <node name="roscore" pkg="ros" type="core" output="screen"/>
     
     <!-- Launch the hello_publisher node -->
     <node name="sim_node" pkg="drone_swarm" type="turtle_sim.py" output="screen">
-        <param name="~total_turtle" value="$(arg total_drone)"/>
+        <param name="~drone_data" value="$(arg drone_data)"/>
     </node>
 
 </launch>

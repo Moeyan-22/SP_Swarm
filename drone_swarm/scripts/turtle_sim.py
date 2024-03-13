@@ -9,6 +9,8 @@ from turtle import RawTurtle, ScrolledCanvas
 from geometry_msgs.msg import Pose, Point, Quaternion
 from geometry_msgs.msg import PoseStamped
 import time
+import json
+
 
 
 
@@ -19,14 +21,20 @@ class TurtleSim:
 
         rospy.init_node('turtle_sim', anonymous=True)
 
-        self.total_turtle = rospy.get_param('~total_turtle', 1)
-        self.turtle_starting_position = [[0, 0] for _ in range(self.total_turtle)]
-        self.edit_turtle_starting_position()
+
+        self.drone_raw_data = rospy.get_param('~drone_data', '[]')
+        self.drone_data = json.loads(self.drone_raw_data)
+
         self.turtles = []
         self.turtle_subscribers = []
         self.turtle_publishers = []
+        self.group_counts = {}
+        self.group_indices = {}
+        self.group_info_tuple = []
+        self.group_count_info = []
+        self.total_turtle = []
+        self.turtle_starting_position = []
 
-        
         self.root = tk.Tk()
         self.root.title('Turtle Controller')
         self.canvas = ScrolledCanvas(self.root, width=1000, height=1000) #1:2 scale
@@ -68,25 +76,33 @@ class TurtleSim:
 
 
     def edit_turtle_starting_position(self):
-        for i in range(self.total_turtle):
-                self.turtle_starting_position[i][1] = -200 - (i-1)*50
-                self.turtle_starting_position[i][0] = -100
-
+        for group in range(self.group_info_tuple[0]):
+            self.total_turtle.append(self.group_count_info[group][0])
+            print(self.total_turtle)
+            for _ in range(self.total_turtle[group]):
+                self.turtle_starting_position.append([0,0])
+            print(self.turtle_starting_position)
+            for i in range(self.total_turtle[group]):
+                    index = self.group_count_info[group][i+1]
+                    self.turtle_starting_position[index][1] = -200 - (i-1)*50
+                    self.turtle_starting_position[index][0] = -100 + group*100
 
 
     def create_turtle_objects(self):
-        for i in range(self.total_turtle):
-            turtle = RawTurtle(self.canvas)
-            turtle.speed(1)
-            turtle.shape("circle")
-            turtle.fillcolor("black")
-            turtle.penup()
-            turtle.goto(self.turtle_starting_position[i][0], self.turtle_starting_position[i][1])
-            turtle.pendown()
-            turtle.action = ''
-            self.turtles.append(turtle)
-            self.start_turtle(i)
-            self.start_coords(i)
+        for a in range(self.group_info_tuple[0]):
+            for i in range(self.total_turtle[a]):
+                info = self.group_count_info[a]
+                turtle = RawTurtle(self.canvas)
+                turtle.speed(1)
+                turtle.shape("circle")
+                turtle.fillcolor("black")
+                turtle.penup()
+                turtle.goto(self.turtle_starting_position[info[i+1]][0], self.turtle_starting_position[info[i+1]][1])
+                turtle.pendown()
+                turtle.action = ''
+                self.turtles.append(turtle)
+                self.start_turtle(info[i+1])
+                self.start_coords(info[i+1])
 
     def start_turtle(self, i):
         turtle_action_subscriber = rospy.Subscriber('/{}/cmd'.format('tello' + str(i)), String, self.get_action, callback_args=(i), queue_size=10)
@@ -132,15 +148,7 @@ class TurtleSim:
             if command_received == "command":
                 self.turtles[i].fillcolor("red")
             elif command_received == "takeoff":
-
-                if i == 0:
-                    self.turtles[i].fillcolor("green")
-                elif i == 1:
-                    self.turtles[i].fillcolor("yellow")
-                elif i == 2:
-                    self.turtles[i].fillcolor("purple")
-
-
+                self.turtles[i].fillcolor("green")
             elif command_received == "land":
                 self.turtles[i].fillcolor("blue")
             elif "rc" in command_received:
@@ -158,11 +166,39 @@ class TurtleSim:
                         orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))
         self.mouse_pos_pub.publish(pose_msg)
 
+    def process_drone_data(self):
+        for index, drone in enumerate(self.drone_data):
+            drone_id, drone_ip, drone_port, group = drone
+
+            # Update group count
+            if group in self.group_counts:
+                self.group_counts[group] += 1
+                self.group_indices[group].append(index)
+            else:
+                self.group_counts[group] = 1
+                self.group_indices[group] = [index]
+
+        num_of_groups = len(self.group_counts)
+        group_names = list(self.group_counts.keys())
+        self.group_info_tuple = [num_of_groups] + group_names
+
+        for group_name in group_names:
+            num_of_drones = self.group_counts[group_name]
+            drone_indices = self.group_indices[group_name]
+            self.group_count_info.append([num_of_drones] + drone_indices)
+
+        print("Group Information Tuple:", self.group_info_tuple)
+        print("Group Count Information:", self.group_count_info)
+
+
+
 
 
 
 
     def start(self):
+        self.process_drone_data()
+        self.edit_turtle_starting_position()
         self.create_turtle_objects()
         self.start_action()
         self.root.mainloop()
