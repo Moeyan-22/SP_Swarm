@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # For 3D scatter plot
 import mplcursors
 import re
+import cProfile
+import pstats
 
 
 class SwarmDriver:
@@ -79,6 +81,7 @@ class SwarmDriver:
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.status_sub = rospy.Subscriber('/status', Array, self.get_status, queue_size=10)
         self.control_sub = rospy.Subscriber('/control', String_Array, self.get_control, queue_size=10)
+
 
         
         #for uwb
@@ -163,6 +166,7 @@ class SwarmDriver:
 
             plt.ion() 
             plt.show()
+            rate = rospy.Rate(1)
 
             while not rospy.is_shutdown():
                 if self.change != 0:
@@ -181,43 +185,21 @@ class SwarmDriver:
                     ax.set_ylabel('Y')
                     ax.set_title('Scatter Plot of Sliced Data')
 
-                    cursor = mplcursors.cursor(hover=True)
-                    cursor.connect("add", lambda sel: self.on_point_select(sel, scatter_sliced))
-                    fig.canvas.mpl_connect('button_press_event', lambda event: self.on_click(event, scatter_sliced))
-                    #print(self.sliced_data)
-                    self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
                 plt.pause(1)
-                time.sleep(0.5)
+                rate.sleep()
+                
+                if not plt.fignum_exists(fig.number):
+                    break
 
-    def on_point_select(self, sel, scatter):
-        index = sel.index
-        if index < len(self.sliced_data):
-            selected_point = self.sliced_data[index, :]
-            self.index = index
-            scatter.set_facecolors(['green' if i == index else 'red' for i in range(len(scatter.get_offsets()))])
-            scatter.set_edgecolors(scatter.get_facecolors())        
-        else:
-            sel.annotation.set_text("")
 
-    def on_click(self, event, scatter):
-        if event.button == 1:  # Left mouse button
 
-            if 0 <= self.index < len(self.sliced_data):
-                x_data = self.sliced_data[:, 0]
-                y_data = self.sliced_data[:, 1]
 
-            scatter.remove()
-               
-            self.sliced_data[self.index][0] = event.xdata
-            self.sliced_data[self.index][1] = event.ydata
-            self.change = 2
 
 
     def publish_takeoff_command(self): #hardcoded
         takeoff_command = Int32()
         takeoff_command.data = 1  
         self.takeoff_command_pub.publish(takeoff_command)
-        self.rate = rospy.Rate(1)
 
     def sequencer(self):
 
@@ -228,7 +210,7 @@ class SwarmDriver:
         time.sleep(5)
 
         for i in range(info[0]):
-            for j in range(6):
+            for j in range(35):
                 if i not in current_sequence:
                     current_sequence.append(info[i+1])
                 self.sequence_pub.publish(current_sequence)
@@ -331,6 +313,8 @@ class SwarmDriver:
 
 
     def start(self):
+
+        self.rate = rospy.Rate(1)
         self.process_drone_data()
         self.get_rosbag()
         self.visualise_data()
@@ -340,8 +324,12 @@ class SwarmDriver:
                 time.sleep(2)
                 sequencer_thread = threading.Thread(target=self.sequencer)
                 sequencer_thread.start()
-                while not rospy.is_shutdown():
+                for i in range(1000):
                     self.publish_takeoff_command()
+                    time.sleep(1)
+                break
+            self.rate.sleep()
+
 
 
 if __name__ == '__main__':

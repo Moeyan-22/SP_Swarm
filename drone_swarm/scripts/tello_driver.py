@@ -54,11 +54,13 @@ class DroneNode:
         self.actioned = False
         self.x_value = 0
         self.y_value = 0
+        self.current_battery = 0
 
 
 
         self.mpad_pub = rospy.Publisher('/mpad', Array, queue_size=10)
         self.land_pub = rospy.Publisher('/{}/land_data'.format(self.name), Array, queue_size=10)
+        self.batt_pub = rospy.Publisher('/batt_data', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad_database', Array, self.get_mpad, queue_size=10)
         self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
         self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
@@ -115,7 +117,6 @@ class DroneNode:
             self.land_pub.publish([int(land_x), int(land_y)])
             time.sleep(1)
  
-
     def receive_command(self):
         while not rospy.is_shutdown():
             self.response, _ = self.sock.recvfrom(128)
@@ -123,7 +124,12 @@ class DroneNode:
             #rospy.loginfo(f"Received reply from drone: {self.response}")
 
             if self.response != "ok" and self.response != "error":
-                self.current_mpad = int(self.response)
+                if int(self.response) > 8:
+                    self.current_battery = int(self.response)
+                    self.batt_pub.publish([self.id, self.current_battery])
+                else:
+                    self.current_mpad = int(self.response)
+
             self.rate.sleep()
 
     def get_mpad(self, data):

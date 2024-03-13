@@ -25,31 +25,31 @@ class SwarmController:
         self.drone_data = [
             ['0','192.168.0.100', '9010', 'A'],
             ['1','192.168.0.101', '9011', 'A'],
-            ['2','192.168.0.103', '9012', 'B']
-            #['3','192.168.0.104', '9013', 'C'],
-            #['4','192.168.0.105', '9014', 'B'],
-            #['5','192.168.0.106', '9015', 'B'],
-            #['6','192.168.0.107', '9016', 'B'],
-            #['7','192.168.0.108', '9017', 'B'],
-            #['8','192.168.0.109', '9018', 'B'],
+            ['2','192.168.0.102', '9012', 'A'],
+            ['3','192.168.0.103', '9013', 'B'],
+            ['4','192.168.0.104', '9014', 'B'],
+            ['5','192.168.0.105', '9015', 'B'],
+            ['6','192.168.0.106', '9016', 'C'],
+            ['7','192.168.0.107', '9017', 'C'],
+            ['8','192.168.0.108', '9018', 'C']
             #['9','192.168.0.110', '9019', 'B']
         ]
 
         self.status = [
             #['tello','group:','action','battery:']
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', ''],
-            ['uninitated','','uncalled','', '']
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', ''],
+            ['uninitated','','uncalled','Batt:', '']
         ]
 
-        self.rosbag_ids = [15,4,15]
+        self.rosbag_ids = [6,8,9]
         self.arm_message = ["arm","A","B","C"]
         self.arm_status = False
 
@@ -73,6 +73,7 @@ class SwarmController:
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
         self.status_sub = rospy.Subscriber('/status', Array, self.get_status, queue_size=10)
+        self.batt_sub = rospy.Subscriber('/batt_data', Array, self.get_batt, queue_size=10)
 
     def process_drone_data(self):
         for index, drone in enumerate(self.drone_data):
@@ -255,11 +256,11 @@ class SwarmController:
         else:
             self.status[self.id_status][2] = "Status:{}%".format(self.percentage_status)
 
-        self.status[self.id_status][3] = "Batt:{}%".format(self.find_batt(self.id_status))
-
     def update_status(self):
         get_status = True
         while not rospy.is_shutdown():
+
+            rate = rospy.Rate(10)
 
             if get_status:
 
@@ -276,7 +277,7 @@ class SwarmController:
 
                 cv2.imshow(self.window_name, img)
                 self.key = cv2.waitKey(100)  
-                rospy.Rate(10).sleep()
+                rate.sleep()
 
                 if self.key == ord('q'):
                     cv2.destroyAllWindows()
@@ -294,8 +295,14 @@ class SwarmController:
         group = self.drone_data[id][3]
         return group
     
-    def find_batt(self, id): #update
-        return 0
+    def get_batt(self, data):
+        batt_data = [0,0]
+        batt_data = data.data
+        id = batt_data[0]
+        batt_level = batt_data[1]
+        print(f"id:{id}, batt_level:{batt_level}")
+        self.status[id][3] = "Batt:{}%".format(batt_level)
+        print(self.status[id][3])
     
     def arm(self):
         for i in range(5):

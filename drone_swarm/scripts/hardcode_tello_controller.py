@@ -65,6 +65,7 @@ class DroneController:
         self.step = 1
         self.step_interval = rospy.Rate(1/0.1) 
         self.base_speed = 0.3
+        self.anti_collison = True
 
 
         
@@ -92,7 +93,7 @@ class DroneController:
     def check_avoid(self):
         if self.id == self.avoid:
             self.stop_avoid = True
-            time.sleep(3)
+            time.sleep(1)
             self.stop_avoid = False
 
 
@@ -221,7 +222,7 @@ class DroneController:
                 else:
                     rc_command = "rc 0 0 0 0"
 
-                if self.stop_avoid == True:
+                if self.stop_avoid == True and self.anti_collison == True:
                     print(f"drone:{self.id} stopped")
                     rc_command = "rc 0 0 0 0"
 
@@ -254,6 +255,8 @@ class DroneController:
     def timing_control(self):
 
         i = 0
+
+        rate = rospy.Rate(20)
         
         while not rospy.is_shutdown():
             if not self.cmd_queue.empty() and i == 0:
@@ -273,6 +276,7 @@ class DroneController:
 
                 if i == self.total_steps:
                     i = 0
+            rate.sleep()
 
     def start(self):
         self.timing_control()
