@@ -49,9 +49,13 @@ class SwarmController:
             ['uninitated','','uncalled','Batt:', '']
         ]
 
-        self.rosbag_ids = [6,8,9]
+        self.rosbag_ids = [10,11,9]
         self.arm_message = ["arm","A","B","C"]
+        self.retry_message = ["retry","A","B","C"]
+        self.takeoff_message = ["takeoff","A","B","C"]
+
         self.arm_status = False
+        self.takeoff_status = False
 
         self.window_name = "status window"
         self.mpad_from_drones = 0
@@ -264,7 +268,15 @@ class SwarmController:
 
             if get_status:
 
-                color = (0, 0, 255) if not self.arm_status else (0, 255, 0)
+                color = (0, 0, 255)
+
+                if self.arm_status:
+                    color = (225, 0, 255)
+
+                if self.takeoff_status:
+                    color = (0, 255, 0)
+
+
                 img = np.zeros((350, 600, 3), dtype=np.uint8)
                 img[:, :] = color
 
@@ -285,6 +297,11 @@ class SwarmController:
                 elif self.key == ord('a'):
                     self.arm_status = True
                     self.arm()
+                elif self.key == ord('r'):
+                    self.retry()
+                elif self.key == ord('t'):
+                    self.takeoff_status = True
+                    self.takeoff()
 
 
     def show_status(self):
@@ -309,9 +326,20 @@ class SwarmController:
             self.control_pub.publish(self.arm_message)
             time.sleep(0.1)
 
+    def retry(self):
+        for i in range(1):
+            self.control_pub.publish(self.retry_message)
+            time.sleep(0.1)
+
+    def takeoff(self):
+        for i in range(5):
+            self.control_pub.publish(self.takeoff_message)
+            time.sleep(0.1)
+
+
     def start(self):
         self.start_uwb()
-        self.start_uwb_tf
+        self.start_uwb_tf()
         self.process_drone_data()
         #self.start_sim()
         self.pass_launch_args()

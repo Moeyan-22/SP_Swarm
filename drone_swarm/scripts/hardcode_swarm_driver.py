@@ -69,6 +69,7 @@ class SwarmDriver:
         self.index = 0
         self.change = 1
         self.arm = False
+        self.takeoff = False
         self.group_counts = {}
         self.group_indices = {}
         self.group_info_tuple = []
@@ -310,6 +311,11 @@ class SwarmDriver:
         for elements in control_data:
             if command == "arm" and self.group == elements:
                 self.arm = True
+                print(f"group {self.group} Armed")
+            elif command == "takeoff" and self.group == elements:
+                self.takeoff = True
+                print(f"group {self.group} taking off")
+
 
 
     def start(self):
@@ -318,15 +324,21 @@ class SwarmDriver:
         self.process_drone_data()
         self.get_rosbag()
         self.visualise_data()
+
         while not rospy.is_shutdown():
             if self.arm == True:
                 self.pass_launch_args()
                 time.sleep(2)
+                break
+            self.rate.sleep()
+
+        while not rospy.is_shutdown():
+            if self.takeoff == True:
                 sequencer_thread = threading.Thread(target=self.sequencer)
                 sequencer_thread.start()
-                for i in range(1000):
+                for i in range(10):
                     self.publish_takeoff_command()
-                    time.sleep(1)
+                    time.sleep(0.1)
                 break
             self.rate.sleep()
 

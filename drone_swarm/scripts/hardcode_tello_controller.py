@@ -9,6 +9,7 @@ from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
 from drone_swarm.msg import Array
+from drone_swarm.msg import String_Array
 from geometry_msgs.msg import PoseStamped
 import time
 
@@ -39,6 +40,8 @@ class DroneController:
         self.exit_positioning = 0
         self.avoid = -1
         self.stop_avoid = False
+        self.connected = False
+        self.did_takeoff = False
 
 
         self.total_steps = 2
@@ -63,6 +66,8 @@ class DroneController:
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
         self.land_sub = rospy.Subscriber('/{}/land_data'.format(self.name), Array, self.get_land_data, queue_size=10)
         self.collision_sub = rospy.Subscriber('/{}/collision'.format(self.group), Int32, self.get_collision, queue_size=10)
+        self.control_sub = rospy.Subscriber('/control', String_Array, self.get_control, queue_size=10)
+
 
 
     def get_collision(self, data):
@@ -85,12 +90,8 @@ class DroneController:
             self.takeoff += 1
 
     def execute_takeoff(self):
-        self.cmd_queue.put("command")
-        self.cmd_queue.put("mon")
-        self.cmd_queue.put("speed 100")
-        self.cmd_queue.put("takeoff")
-
-
+        self.command_pub.publish("takeoff")
+        self.did_takeoff = True
 
     def execute_landing(self):
         self.cmd_queue = queue.Queue()
@@ -239,24 +240,51 @@ class DroneController:
         rate = rospy.Rate(20)
         
         while not rospy.is_shutdown():
-            if not self.cmd_queue.empty() and i == 0:
-                cmd = self.cmd_queue.get()
-                self.command_pub.publish(cmd)
-                i += self.step
-                self.step_interval.sleep()
-            else:
-                self.command_pub.publish("rc 0 0 0 0")
-                i += self.step
-                self.step_interval.sleep()
+            if self.did_takeoff:
+                if not self.cmd_queue.empty() and i == 0:
+                    cmd = self.cmd_queue.get()
+                    self.command_pub.publish(cmd)
+                    i += self.step
+                    self.step_interval.sleep()
+                else:
+                    self.command_pub.publish("rc 0 0 0 0")
+                    i += self.step
+                    self.step_interval.sleep()
 
-            while i < self.total_steps and i != 0:
-                self.command_pub.publish("mid?")
-                i += self.step
-                self.step_interval.sleep()
+                while i < self.total_steps and i != 0:
 
-                if i == self.total_steps:
-                    i = 0
-            rate.sleep()
+                    self.command_pub.publish("mid?")
+                    i += self.step
+                    self.step_interval.sleep()
+
+                    self.command_pub.publish("battery?")
+                    i += self.step
+                    self.step_interval.sleep()
+
+                    if i == self.total_steps:
+                        i = 0
+        rate.sleep()
+
+    def get_control(self, data):
+        control_data = []
+        control_data = data.data
+        command = control_data[0]
+        if command == "retry":
+            print(f"drone {self.id} is retrying")
+            self.execute_arm()
+
+    def execute_arm(self):
+        self.command_pub.publish("command")
+        time.sleep(0.1)
+        self.command_pub.publish("mon")
+        time.sleep(0.1)
+        self.command_pub.publish("speed 100")
+        time.sleep(0.1)
+        self.command_pub.publish("battery?")
+
+ 
+
+
 
     def start(self):
         self.timing_control()

@@ -88,8 +88,8 @@ class DroneNode:
 
     def send_command(self, command = ''):
         if self.rescue == False:
-            #if command.data != "mid?" and command.data != "rc 0 0 0 0":
-            #    rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
+            if command.data != "mid?" and command.data != "rc 0 0 0 0":
+                rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
             self.send(command.data)
 
     def get_uwb(self, data):
@@ -121,7 +121,7 @@ class DroneNode:
         while not rospy.is_shutdown():
             self.response, _ = self.sock.recvfrom(128)
             self.response = self.response.decode(encoding='utf-8').strip()
-            #rospy.loginfo(f"Received reply from drone: {self.response}")
+            rospy.loginfo(f"Received reply from drone: {self.response}")
 
             if self.response != "ok" and self.response != "error":
                 if int(self.response) > 8:
@@ -184,8 +184,7 @@ class DroneNode:
             return True
         else:
             rospy.logerr("Unexpected count value: {}".format(count))
-            return False        
-        
+            return False       
 
 
 
