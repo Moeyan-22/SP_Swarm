@@ -64,7 +64,7 @@ class SwarmDriver:
 
         self.percentage = [0,0,0,0,0,0,0,0,0,0]
 
-        self.takeoff = 0
+        self.takeoff = False
         self.bag_file_path = ""
         self.rosbag_iteration = 0
         self.rosbag_data = np.array([])
@@ -96,6 +96,7 @@ class SwarmDriver:
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
         self.status_sub = rospy.Subscriber('/status', Array, self.get_status, queue_size=10)
+        self.batt_sub = rospy.Subscriber('/batt_data', Array, self.get_batt, queue_size=10)
         
         #for uwb
         #self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
@@ -249,7 +250,7 @@ class SwarmDriver:
         time.sleep(1)
 
         for i in range(self.drone_num):
-            for j in range(2):
+            for j in range(11):
                 if i not in current_sequence:
                     current_sequence.append(i)
 
@@ -338,22 +339,7 @@ class SwarmDriver:
         #print(f"hello, this is the data {self.str_data}")
         return json.dumps(self.str_data)
 
-    def start(self):
-        #self.start_uwb()
-        #time.sleep(2)
-        #self.start_uwb_tf()
-        self.process_drone_data()
-        self.show_status()
-        self.get_rosbag()
-        self.visualise_data()
-        while not rospy.is_shutdown():
-            if self.ok == True:
-                self.pass_launch_args()
-                time.sleep(2)
-                sequencer_thread = threading.Thread(target=self.sequencer)
-                sequencer_thread.start()
-                while not rospy.is_shutdown():
-                    self.publish_takeoff_command()
+
 
     def get_status(self, data):
         status_data = [0,0]
@@ -402,8 +388,8 @@ class SwarmDriver:
                 if self.key == ord('q'):
                     cv2.destroyAllWindows()
                     get_status = False
-                elif self.key == ord('a'):
-                    self.ok = True
+                elif self.key == ord('t'):
+                    self.takeoff = True
 
     def update_percentage(self, id, percentage_num):
         self.percentage[id] = percentage_num
@@ -428,6 +414,13 @@ class SwarmDriver:
             else:
                 self.status[behind][4] = ""
                 self.collision_pub.publish(-1)
+
+    def get_batt(self, data):
+        batt_data = [0,0]
+        batt_data = data.data
+        id = batt_data[0]
+        batt_level = batt_data[1]
+        self.status[id][3] = "Batt:{}%".format(batt_level)
 
 
                     
@@ -504,6 +497,25 @@ class SwarmDriver:
         else:
             rospy.logerr("Unexpected count value: {}".format(count))
             return False        
+        
+
+    def start(self):
+        #self.start_uwb()
+        #time.sleep(2)
+        #self.start_uwb_tf()
+        self.process_drone_data()
+        self.show_status()
+        self.get_rosbag()
+        self.visualise_data()
+        self.pass_launch_args()
+        time.sleep(2)
+        while not rospy.is_shutdown():
+                if self.takeoff:
+                    sequencer_thread = threading.Thread(target=self.sequencer)
+                    sequencer_thread.start()
+                    while not rospy.is_shutdown():
+                        self.publish_takeoff_command()
+                        
 
 
 if __name__ == '__main__':

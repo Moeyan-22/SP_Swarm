@@ -104,10 +104,8 @@ class DroneController:
             self.takeoff += 1
 
     def execute_takeoff(self):
-        self.cmd_queue.put("command")
-        self.cmd_queue.put("mon")
-        self.cmd_queue.put("speed 100")
         self.cmd_queue.put("takeoff")
+
 
 
 
@@ -152,6 +150,7 @@ class DroneController:
 
         
     def positioning(self):
+        
         rate = rospy.Rate(5)
 
         print(self.target)
@@ -256,20 +255,23 @@ class DroneController:
         i = 0
         
         while not rospy.is_shutdown():
-            if not self.cmd_queue.empty() and i == 0:
-                cmd = self.cmd_queue.get()
-                self.command_pub.publish(cmd)
-                i += self.step
-                self.step_interval.sleep()
-            else:
-                self.command_pub.publish("rc 0 0 0 0")
-                i += self.step
-                self.step_interval.sleep()
+            if self.started:
+                if not self.cmd_queue.empty() and i == 0:
+                    cmd = self.cmd_queue.get()
+                    self.command_pub.publish(cmd)
+                    i += self.step
+                    self.step_interval.sleep()
+                else:
+                    self.command_pub.publish("rc 0 0 0 0")
+                    i += self.step
+                    self.step_interval.sleep()
 
             while i < self.total_steps and i != 0:
                 self.command_pub.publish("mid?")
                 i += self.step
                 self.step_interval.sleep()
+                self.command_pub.publish("battery?")
+
 
                 if i == self.total_steps:
                     i = 0
