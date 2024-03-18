@@ -31,7 +31,7 @@ class SwarmController:
             #['5','192.168.0.105', '9015', 'B'],
             #['6','192.168.0.106', '9016', 'C'],
             #['7','192.168.0.107', '9017', 'C'],
-            #['8','192.168.0.108', '9018', 'C']
+            #['8','192.168.0.108', '9018', 'C'],
             #['9','192.168.0.110', '9019', 'B']
         ]
 
@@ -56,6 +56,7 @@ class SwarmController:
 
         self.arm_status = False
         self.takeoff_status = False
+        self.simulation = True
 
         self.window_name = "status window"
         self.mpad_from_drones = 0
@@ -77,7 +78,6 @@ class SwarmController:
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
         self.status_sub = rospy.Subscriber('/status', Array, self.get_status, queue_size=10)
-        self.batt_sub = rospy.Subscriber('/batt_data', Array, self.get_batt, queue_size=10)
 
     def process_drone_data(self):
         for index, drone in enumerate(self.drone_data):
@@ -115,12 +115,11 @@ class SwarmController:
             cli_args = ['drone_swarm',
                         launch_file,
                         'group:={}'.format(self.group_info_tuple[num+1]),
-                        'drone_num:={}'.format(self.group_count_info[num][0]),
                         'rosbag_id:={}'.format(self.rosbag_ids[num]),
                         'drone_data:={}'.format(self.format_drone_data()),
+                        'simulation:={}'.format(self.simulation)
                         ]
                         
-
             roslaunch_args = cli_args[2:]
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)[0]
             
@@ -249,16 +248,20 @@ class SwarmController:
         status_data = [0,0]
         status_data = data.data
         self.id_status = status_data[0]
-        self.percentage_status = status_data[3]
-        self.landed_status = status_data[4]
+        self.percentage_status = status_data[1]
+        self.battery_status = status_data[2]
+        self.landed_status = status_data[3]
 
         self.status[self.id_status][0] = "Tello:{}".format(self.id_status)
         self.status[self.id_status][1] = "Group:{}".format(self.find_group(self.id_status))
 
-        if self.landed_status == 1:
+        if self.landed_status == True:
             self.status[self.id_status][2] = "Status:Landed"
         else:
             self.status[self.id_status][2] = "Status:{}%".format(self.percentage_status)
+
+        self.status[self.id_status][3] = "Batt:{}%".format(self.battery_status)
+
 
     def update_status(self):
         get_status = True
@@ -312,14 +315,6 @@ class SwarmController:
         group = self.drone_data[id][3]
         return group
     
-    def get_batt(self, data):
-        batt_data = [0,0]
-        batt_data = data.data
-        id = batt_data[0]
-        batt_level = batt_data[1]
-        print(f"id:{id}, batt_level:{batt_level}")
-        self.status[id][3] = "Batt:{}%".format(batt_level)
-        print(self.status[id][3])
     
     def arm(self):
         for i in range(5):
@@ -341,7 +336,10 @@ class SwarmController:
         self.start_uwb()
         self.start_uwb_tf()
         self.process_drone_data()
-        #self.start_sim()
+
+        if self.simulation:
+            self.start_sim()
+
         self.pass_launch_args()
         self.show_status()
 

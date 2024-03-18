@@ -122,7 +122,6 @@ class TurtleSim:
             thread_action = threading.Thread(target=self.execute_action, args=(i,))
             thread_action.start()
 
-
     def get_coords(self, i):
         while not rospy.is_shutdown():
 

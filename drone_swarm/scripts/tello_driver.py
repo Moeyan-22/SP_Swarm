@@ -99,7 +99,7 @@ class DroneNode:
         self.y_value = round(y_value * 100, 4)
         
     def rescue_action_1(self):
-        print("land 1")
+        print("land 1") 
         land_x = self.x_value
         land_y = self.y_value
 
