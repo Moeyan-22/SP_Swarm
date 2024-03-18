@@ -9,6 +9,7 @@ from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
 from drone_swarm.msg import Array
+from drone_swarm.msg import String_Array
 from geometry_msgs.msg import PoseStamped
 import time
 
@@ -82,6 +83,7 @@ class DroneController:
         self.sequence_sub = rospy.Subscriber('/{}/sequence_command'.format(self.group), Array, self.get_sequence, queue_size=10)
         self.land_sub = rospy.Subscriber('/{}/land_data'.format(self.name), Array, self.get_land_data, queue_size=10)
         self.collision_sub = rospy.Subscriber('/{}/collision'.format(self.group), Int32, self.get_collision, queue_size=10)
+        self.control_sub = rospy.Subscriber('/control', String_Array, self.get_control, queue_size=10)
 
 
     def get_collision(self, data):
@@ -104,7 +106,7 @@ class DroneController:
             self.takeoff += 1
 
     def execute_takeoff(self):
-        self.cmd_queue.put("takeoff")
+        self.command_pub.publish("takeoff")
 
 
 
@@ -275,6 +277,40 @@ class DroneController:
 
                 if i == self.total_steps:
                     i = 0
+
+    def get_control(self, data):
+        control_data = []
+        control_data = data.data
+        command = control_data[0]
+        if command == "arm":
+            print(f"drone {self.id} is arming")
+            self.execute_arm()
+        elif command == "retry":
+            print(f"drone {self.id} is retrying takeoff")
+            self.execute_retry()
+        elif command == "land":
+            print(f"drone {self.id} is landing")
+            self.execute_landing()
+
+    def execute_arm(self):
+        self.command_pub.publish("command")
+        time.sleep(0.1)
+        self.command_pub.publish("mon")
+        time.sleep(0.1)
+        self.command_pub.publish("speed 100")
+        time.sleep(0.1)
+        self.command_pub.publish("battery?")
+
+    def execute_retry(self):
+        self.command_pub.publish("takeoff")
+
+    def execute_landing(self):
+        self.command_pub.publish("rc 0 0 0 0")
+        time.sleep(0.1)
+        self.command_pub.publish("land")
+        time.sleep(1)
+        rospy.signal_shutdown('Self-termination requested')
+
 
     def start(self):
         self.timing_control()

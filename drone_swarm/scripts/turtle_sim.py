@@ -133,12 +133,7 @@ class TurtleSim:
                 self.turtles[i].fillcolor("red")
             elif command_received == "takeoff":
 
-                if i == 0:
-                    self.turtles[i].fillcolor("green")
-                elif i == 1:
-                    self.turtles[i].fillcolor("yellow")
-                elif i == 2:
-                    self.turtles[i].fillcolor("purple")
+                self.turtles[i].fillcolor("green")
 
 
             elif command_received == "land":

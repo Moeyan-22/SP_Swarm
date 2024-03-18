@@ -8,6 +8,7 @@ import numpy as np
 import json
 import cv2 
 from drone_swarm.msg import Array
+from drone_swarm.msg import String_Array
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Point
@@ -64,6 +65,12 @@ class SwarmDriver:
 
         self.percentage = [0,0,0,0,0,0,0,0,0,0]
 
+        self.arm_message = ["arm","A","B","C"]
+        self.retry_message = ["retry","A","B","C"]
+        self.land_message = ["land","A","B","C"]
+
+
+
         self.takeoff = False
         self.bag_file_path = ""
         self.rosbag_iteration = 0
@@ -94,9 +101,11 @@ class SwarmDriver:
         self.sequence_pub = rospy.Publisher('/{}/sequence_command'.format(self.group), Array, queue_size=10)
         self.takeoff_command_pub = rospy.Publisher('/{}/takeoff_command'.format(self.group), Int32, queue_size=10)
         self.mpad_pub = rospy.Publisher('/mpad_database', Array, queue_size=10)
+        self.control_pub = rospy.Publisher('/control', String_Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad', Array, self.get_mpad, queue_size=10)
         self.status_sub = rospy.Subscriber('/status', Array, self.get_status, queue_size=10)
         self.batt_sub = rospy.Subscriber('/batt_data', Array, self.get_batt, queue_size=10)
+
         
         #for uwb
         #self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
@@ -390,6 +399,12 @@ class SwarmDriver:
                     get_status = False
                 elif self.key == ord('t'):
                     self.takeoff = True
+                elif self.key == ord('a'):
+                    self.arm()
+                elif self.key == ord('r'):
+                    self.retry()
+                elif self.key == ord('l'):
+                    self.land()
 
     def update_percentage(self, id, percentage_num):
         self.percentage[id] = percentage_num
@@ -421,6 +436,21 @@ class SwarmDriver:
         id = batt_data[0]
         batt_level = batt_data[1]
         self.status[id][3] = "Batt:{}%".format(batt_level)
+
+    def arm(self):
+        for i in range(1):
+            self.control_pub.publish(self.arm_message)
+            time.sleep(0.1)
+
+    def retry(self):
+        for i in range(1):
+            self.control_pub.publish(self.retry_message)
+            time.sleep(0.1)
+
+    def land(self):
+        for i in range(1):
+            self.control_pub.publish(self.land_message)
+            time.sleep(0.1)
 
 
                     
@@ -497,6 +527,21 @@ class SwarmDriver:
         else:
             rospy.logerr("Unexpected count value: {}".format(count))
             return False        
+        
+
+    def sequencer(self):
+
+        current_sequence = []
+
+        time.sleep(5)
+
+        for i in range(self.drone_num):
+            for j in range(11):
+                if i not in current_sequence:
+                    current_sequence.append(i)
+
+                self.sequence_pub.publish(current_sequence)
+                time.sleep(1)
         
 
     def start(self):
