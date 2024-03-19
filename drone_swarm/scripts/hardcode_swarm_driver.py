@@ -29,21 +29,22 @@ class SwarmDriver:
         rospy.init_node('swarm_driver_' ,anonymous=True)
 
         self.group = rospy.get_param('~group', 'A')
-        self.drone_num = rospy.get_param('~drone_num', 1)
         self.rosbag_id = rospy.get_param('~rosbag_id', 1)
+        self.master = rospy.get_param('~master', True)
+
         
         #inn the future make it a param
         self.drone_data = [
             ['0','192.168.0.101', '9010', 'A'],
-            ['1','192.168.0.102', '9011', 'A'],
-            ['2','192.168.0.103', '9012', 'B'],
-            ['3','192.168.0.104', '9013', 'B'],
-            ['4','192.168.0.105', '9014', 'B'],
-            ['5','192.168.0.106', '9015', 'B'],
-            ['6','192.168.0.107', '9016', 'B'],
-            ['7','192.168.0.108', '9017', 'B'],
-            ['8','192.168.0.109', '9018', 'B'],
-            ['9','192.168.0.110', '9019', 'B']
+            ['1','192.168.0.102', '9011', 'B'],
+            ['2','192.168.0.103', '9012', 'C'],
+            ['3','192.168.0.104', '9013', 'C'],
+            ['4','192.168.0.105', '9014', 'C'],
+            ['5','192.168.0.106', '9015', 'C'],
+            ['6','192.168.0.107', '9016', 'C'],
+            ['7','192.168.0.108', '9017', 'C'],
+            ['8','192.168.0.109', '9018', 'C'],
+            ['9','192.168.0.110', '9019', 'C']
         ]
 
 
@@ -138,6 +139,12 @@ class SwarmDriver:
 
         print("Group Information Tuple:", self.group_info_tuple)
         print("Group Count Information:", self.group_count_info)
+
+        current_group = self.group_info_tuple.index(self.group)
+        self.info = self.group_count_info[current_group-1]
+        self.drone_num = self.info[0]
+
+
 
 
 
@@ -308,7 +315,9 @@ class SwarmDriver:
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
 
-        for num in range(self.drone_num):
+        for id in range(self.drone_num):
+
+            num = self.info[id+1]
             
             launch_file = "hardcode_drone.launch"
             launch_files = []
@@ -545,9 +554,10 @@ class SwarmDriver:
         
 
     def start(self):
-        self.start_uwb()
-        time.sleep(2)
-        self.start_uwb_tf()
+        if self.master:
+            self.start_uwb()
+            time.sleep(2)
+            self.start_uwb_tf()
         self.process_drone_data()
         self.show_status()
         self.get_rosbag()

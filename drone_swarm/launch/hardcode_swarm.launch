@@ -1,15 +1,17 @@
 <launch>
-  <arg name="group" default="A" />
-  <arg name="drone_num" default="2" />
+  <arg name="group" default="B" />
   <arg name="rosbag_id" default="4" />
+  <arg name="master" default="True" />
+
 
 
 
     <!-- Start the swarm_driver -->
     <node name="hardcode_swarm_driver_node" pkg="drone_swarm" type="hardcode_swarm_driver.py" output="screen">
       <param name="~group" value="$(arg group)"/>
-      <param name="~drone_num" value="$(arg drone_num)"/>
       <param name="~rosbag_id" value="$(arg rosbag_id)"/>
+      <param name="~master" value="$(arg master)"/>
+
     </node>
 
 
