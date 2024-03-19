@@ -87,8 +87,8 @@ class DroneNode:
 
     def send_command(self, command = ''):
         if self.rescue == False:
-            #if command.data != "mid?" and command.data != "rc 0 0 0 0" and command.data != "battery?":
-            rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
+            if command.data != "mid?" and command.data != "rc 0 0 0 0" and command.data != "battery?":
+                rospy.loginfo(f"executing command for drone {self.drone_ip}: {command.data}")
             self.send(command.data)
 
     def get_uwb(self, data):

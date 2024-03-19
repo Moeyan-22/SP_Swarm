@@ -34,9 +34,9 @@ class SwarmDriver:
         
         #inn the future make it a param
         self.drone_data = [
-            ['0','192.168.0.100', '9010', 'A'],
+            ['0','192.168.0.101', '9010', 'A'],
             ['1','192.168.0.102', '9011', 'A'],
-            ['2','192.168.0.103', '9012', 'A'],
+            ['2','192.168.0.103', '9012', 'B'],
             ['3','192.168.0.104', '9013', 'B'],
             ['4','192.168.0.105', '9014', 'B'],
             ['5','192.168.0.106', '9015', 'B'],
@@ -108,10 +108,10 @@ class SwarmDriver:
 
         
         #for uwb
-        #self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+        self.rosbag_sub = rospy.Subscriber('/{}/uwb_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
        
        #for sim
-        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
+        #self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.rosbag_id), Pose, self.get_rosbag_data, queue_size=10)
 
     def process_drone_data(self):
         # Iterate through the drone data
@@ -545,9 +545,9 @@ class SwarmDriver:
         
 
     def start(self):
-        #self.start_uwb()
-        #time.sleep(2)
-        #self.start_uwb_tf()
+        self.start_uwb()
+        time.sleep(2)
+        self.start_uwb_tf()
         self.process_drone_data()
         self.show_status()
         self.get_rosbag()

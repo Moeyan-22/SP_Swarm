@@ -73,10 +73,10 @@ class DroneController:
         self.status_pub = rospy.Publisher('/status', Array, queue_size=10)
 
         #real uwb
-        #self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
 
         #simulation uwb
-        self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_fake_uwb, queue_size=10)
+        #self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_fake_uwb, queue_size=10)
 
 
         self.takeoff_sub = rospy.Subscriber('/{}/takeoff_command'.format(self.group), Int32, self.get_takeoff_command, queue_size=10)
@@ -164,6 +164,7 @@ class DroneController:
 
             if self.exit_positioning == 1:
                 target = f"{self.land_x} {self.land_y}"
+                print("special landing")
             
             if self.exit_positioning == 2:
                 break
@@ -176,7 +177,7 @@ class DroneController:
                 point = Point()
                 point.x = 0
                 point.y = 0
-                alpha = 0.2 #0.5
+                alpha = 0.5 #0.5
                 rc_command = ""
                 numbers = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
                 target_point = np.array([numbers[0], numbers[1]])
@@ -189,7 +190,7 @@ class DroneController:
 
                 #print(f"error x: {error_x} error y: {error_y}")
 
-                max_output = 100  #70
+                max_output = 70  #70
                 control_x = np.clip(error_x, -max_output, max_output)
                 control_y = np.clip(error_y, -max_output, max_output)
 
@@ -200,7 +201,7 @@ class DroneController:
 
                 #print(f"{self.name} current x:{self.x_value}, current y:{self.y_value}, target:{target}, error x:{error_x}, error y:{error_y}, dist: {dist}")
 
-                min_dist = 10 #20
+                min_dist = 22 #20
 
                 if dist < min_dist:
                     break
@@ -257,16 +258,15 @@ class DroneController:
         i = 0
         
         while not rospy.is_shutdown():
-            if self.started:
-                if not self.cmd_queue.empty() and i == 0:
-                    cmd = self.cmd_queue.get()
-                    self.command_pub.publish(cmd)
-                    i += self.step
-                    self.step_interval.sleep()
-                else:
-                    self.command_pub.publish("rc 0 0 0 0")
-                    i += self.step
-                    self.step_interval.sleep()
+            if not self.cmd_queue.empty() and i == 0:
+                cmd = self.cmd_queue.get()
+                self.command_pub.publish(cmd)
+                i += self.step
+                self.step_interval.sleep()
+            else:
+                self.command_pub.publish("rc 0 0 0 0")
+                i += self.step
+                self.step_interval.sleep()
 
             while i < self.total_steps and i != 0:
                 self.command_pub.publish("mid?")
