@@ -1,7 +1,9 @@
 <launch>
   <arg name="group" default="B" />
-  <arg name="rosbag_id" default="4" />
+  <arg name="rosbag_id" default="7" />
   <arg name="master" default="True" />
+  <group ns="$(arg group)">
+
 
 
 
@@ -13,6 +15,8 @@
       <param name="~master" value="$(arg master)"/>
 
     </node>
+  </group>
+
 
 
 

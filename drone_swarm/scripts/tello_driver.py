@@ -62,7 +62,7 @@ class DroneNode:
         self.batt_pub = rospy.Publisher('/batt_data', Array, queue_size=10)
         self.mpad_sub = rospy.Subscriber('/mpad_database', Array, self.get_mpad, queue_size=10)
         self.command_sub = rospy.Subscriber('/{}/cmd'.format(self.name), String, self.send_command, queue_size=10)
-        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/B/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
 
 
 

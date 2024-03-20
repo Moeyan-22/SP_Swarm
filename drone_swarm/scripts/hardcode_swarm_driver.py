@@ -36,15 +36,15 @@ class SwarmDriver:
         #inn the future make it a param
         self.drone_data = [
             ['0','192.168.0.101', '9010', 'A'],
-            ['1','192.168.0.102', '9011', 'B'],
-            ['2','192.168.0.103', '9012', 'C'],
-            ['3','192.168.0.104', '9013', 'C'],
-            ['4','192.168.0.105', '9014', 'C'],
-            ['5','192.168.0.106', '9015', 'C'],
-            ['6','192.168.0.107', '9016', 'C'],
-            ['7','192.168.0.108', '9017', 'C'],
-            ['8','192.168.0.109', '9018', 'C'],
-            ['9','192.168.0.110', '9019', 'C']
+            ['1','192.168.0.104', '9011', 'A'],
+            ['2','192.168.0.109', '9012', 'A'],
+            ['3','192.168.0.102', '9013', 'B'],
+            ['4','192.168.0.103', '9014', 'B'],
+            ['5','192.168.0.110', '9015', 'B'],
+            ['6','192.168.0.106', '9016', 'B'],
+            ['7','192.168.0.105', '9017', 'C'],
+            ['8','192.168.0.111', '9018', 'C'],
+            ['9','192.168.0.113', '9019', 'C']
         ]
 
 
@@ -66,9 +66,9 @@ class SwarmDriver:
 
         self.percentage = [0,0,0,0,0,0,0,0,0,0]
 
-        self.arm_message = ["arm","A","B","C"]
-        self.retry_message = ["retry","A","B","C"]
-        self.land_message = ["land","A","B","C"]
+        self.arm_message = ["arm","ABC"]
+        self.retry_message = ["retry","ABC"]
+        self.land_message = ["land","ABC"]
 
 
 
@@ -77,7 +77,7 @@ class SwarmDriver:
         self.rosbag_iteration = 0
         self.rosbag_data = np.array([])
         self.sliced_data = []
-        self.slicing_rate = 70 #70
+        self.slicing_rate = 65 #70
         self.uuid = ""
         self.mpad_from_drones = 0
         self.known_mpad = [0]
@@ -266,7 +266,7 @@ class SwarmDriver:
         time.sleep(1)
 
         for i in range(self.drone_num):
-            for j in range(11):
+            for j in range(1):
                 if i not in current_sequence:
                     current_sequence.append(i)
 

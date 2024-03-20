@@ -73,7 +73,7 @@ class DroneController:
         self.status_pub = rospy.Publisher('/status', Array, queue_size=10)
 
         #real uwb
-        self.uwb_sub = rospy.Subscriber('/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
+        self.uwb_sub = rospy.Subscriber('/B/nlt_anchorframe0_pose_node{}'.format(self.id), PoseStamped, self.get_uwb, queue_size=10)
 
         #simulation uwb
         #self.uwb_sub = rospy.Subscriber('/{}/uwb'.format(self.name), Point, self.get_fake_uwb, queue_size=10)
@@ -111,7 +111,7 @@ class DroneController:
 
 
 
-    def execute_landing(self):
+    def execute_mpad_landing(self):
         self.cmd_queue = queue.Queue()
         self.target = []
         self.target = [f'{self.land_x} {self.land_y}']
@@ -138,7 +138,7 @@ class DroneController:
             self.land_data = data.data
             self.land_x = self.land_data[0]
             self.land_y = self.land_data[1]
-            self.execute_landing()
+            self.execute_mpad_landing()
             self.i += 1
 
 
@@ -282,23 +282,24 @@ class DroneController:
         control_data = []
         control_data = data.data
         command = control_data[0]
-        if command == "arm":
+        group = control_data[1]
+        if command == "arm" and self.group in group:
             print(f"drone {self.id} is arming")
             self.execute_arm()
-        elif command == "retry":
+        elif command == "retry" and self.group in group:
             print(f"drone {self.id} is retrying takeoff")
             self.execute_retry()
-        elif command == "land":
+        elif command == "land" and self.group in group:
             print(f"drone {self.id} is landing")
             self.execute_landing()
 
     def execute_arm(self):
         self.command_pub.publish("command")
-        time.sleep(0.1)
+        time.sleep(0.2)
         self.command_pub.publish("mon")
-        time.sleep(0.1)
+        time.sleep(0.2)
         self.command_pub.publish("speed 100")
-        time.sleep(0.1)
+        time.sleep(0.2)
         self.command_pub.publish("battery?")
 
     def execute_retry(self):
