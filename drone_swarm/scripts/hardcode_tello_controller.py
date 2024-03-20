@@ -201,7 +201,7 @@ class DroneController:
 
                 #print(f"{self.name} current x:{self.x_value}, current y:{self.y_value}, target:{target}, error x:{error_x}, error y:{error_y}, dist: {dist}")
 
-                min_dist = 22 #20
+                min_dist = 25 #20
 
                 if dist < min_dist:
                     break
