@@ -68,6 +68,7 @@ class DroneController:
         self.base_speed = 0.3
 
 
+
         
         self.command_pub = rospy.Publisher('/{}/cmd'.format(self.name), String, queue_size=10)
         self.status_pub = rospy.Publisher('/status', Array, queue_size=10)
@@ -181,56 +182,63 @@ class DroneController:
                 rc_command = ""
                 numbers = [int(s) for s in target.split() if s.lstrip('-').isdigit()]                
                 target_point = np.array([numbers[0], numbers[1]])
-                current_point = np.array([self.x_value, self.y_value])
+
+                try:
+                    current_point = np.array([self.x_value, self.y_value])
+
 
                 
 
-                error_x = target_point[0] - current_point[0]
-                error_y = target_point[1] - current_point[1]
+                    error_x = target_point[0] - current_point[0]
+                    error_y = target_point[1] - current_point[1]
 
-                #print(f"error x: {error_x} error y: {error_y}")
+                    #print(f"error x: {error_x} error y: {error_y}")
 
-                max_output = 70  #70
-                control_x = np.clip(error_x, -max_output, max_output)
-                control_y = np.clip(error_y, -max_output, max_output)
+                    max_output = 70  #70
+                    control_x = np.clip(error_x, -max_output, max_output)
+                    control_y = np.clip(error_y, -max_output, max_output)
 
-                control_x = alpha * control_x + (1 - alpha) * point.x
-                control_y = alpha * control_y + (1 - alpha) * point.y
+                    control_x = alpha * control_x + (1 - alpha) * point.x
+                    control_y = alpha * control_y + (1 - alpha) * point.y
 
-                dist = np.linalg.norm(target_point - current_point)
+                    dist = np.linalg.norm(target_point - current_point)
 
-                #print(f"{self.name} current x:{self.x_value}, current y:{self.y_value}, target:{target}, error x:{error_x}, error y:{error_y}, dist: {dist}")
+                    print(f"{self.name} current x:{self.x_value}, current y:{self.y_value}, target:{target}, error x:{error_x}, error y:{error_y}, dist: {dist}")
 
-                min_dist = 25 #20
+                    min_dist = 25 #20
 
-                if dist < min_dist:
-                    break
+                    if dist < min_dist:
+                        break
 
-                if dist < min_dist and self.exit_positioning == 1:
-                    self.exit_positioning +=1
-                    break
+                    if dist < min_dist and self.exit_positioning == 1:
+                        self.exit_positioning +=1
+                        break
 
-                if dist < min_dist and self.exit_positioning == 2:
-                    self.exit_positioning += 3
-                    break
-
-
-                point.x = control_x
-                point.y = control_y
-
-                if not math.isnan(point.x) and not math.isnan(point.y):
-                    rc_command = "rc {} {} 0 0".format(int(point.x), int(point.y))
-                else:
-                    rc_command = "rc 0 0 0 0"
-
-                if self.stop_avoid == True:
-                    print(f"drone:{self.id} stopped")
-                    rc_command = "rc 0 0 0 0"
+                    if dist < min_dist and self.exit_positioning == 2:
+                        self.exit_positioning += 3
+                        break
 
 
-                self.cmd_queue.put(rc_command)
+                    point.x = control_x
+                    point.y = control_y
 
-                rate.sleep()
+                    if not math.isnan(point.x) and not math.isnan(point.y):
+                        rc_command = "rc {} {} 0 0".format(int(point.x), int(point.y))
+                    else:
+                        rc_command = "rc 0 0 0 0"
+
+                    #if self.stop_avoid == True:
+                    #    print(f"drone:{self.id} stopped")
+                    #    rc_command = "rc 0 0 0 0"
+
+
+                    self.cmd_queue.put(rc_command)
+
+                    rate.sleep()
+
+                except Exception as e:
+                    rospy.logerr("Error at getting uwb: {}".format(e))
+                    time.sleep(1)
 
             i += 1
 

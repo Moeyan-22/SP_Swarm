@@ -11,6 +11,14 @@ import time
 from geometry_msgs.msg import Pose, Point, Quaternion
 
 
+import threading
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # For 3D scatter plot
+import mplcursors
+import re
+
+
+
 
 class PositionCapture:
 
@@ -23,6 +31,19 @@ class PositionCapture:
         self.version_file_path = "/home/moe/catkin_ws/src/drone_swarm/rosbag/version.txt"
         self.mouse_subscriber = rospy.Subscriber('/mouse_pose', Pose, lambda data: self.get_mouse_pos(data), queue_size=10)
         self.rate = rospy.Rate(10)
+
+
+        self.bag_file_path = ""
+        self.rosbag_iteration = 0
+        self.rosbag_data = np.array([])
+        self.sliced_data = []
+        self.slicing_rate = 20 #70
+        self.change = 1
+
+
+
+
+
 
     def get_mouse_pos(self, data):
         self.mouse_pos_pub_id.publish(data)
@@ -71,8 +92,113 @@ class PositionCapture:
             elif key == ord('q'):
                 rospy.signal_shutdown('User pressed "q" key')
 
+            elif key == ord('p'):
+                self.preview()
+
             cv2.imshow('Keyboard Input Window', blank_image)
             self.rate.sleep()
+
+
+
+
+
+
+
+    def preview(self):
+        self.rosbag_sub = rospy.Subscriber('/{}/mouse_pose'.format(self.version), Pose, self.get_rosbag_data, queue_size=10)
+        self.get_rosbag()
+        self.visualise_data()
+
+    def get_rosbag(self):
+        self.bag_file_path = "/home/moe/catkin_ws/src/drone_swarm/rosbag/rosbag{}.bag".format(self.version)
+
+        try:
+            playback_rate = 100
+            command = ['rosbag', 'play', '-r', str(playback_rate), self.bag_file_path]
+            process = subprocess.Popen(command)
+            process.wait()
+            self.process_rosbag_data()
+        except Exception as e:
+            rospy.logerr("Error at rosbag playback: {}".format(e))
+
+    def get_rosbag_data(self, data):
+
+        rosbag_x = int(data.position.x)
+        rosbag_y = int(data.position.y)
+
+        # Append new data
+        new_row = np.array([[rosbag_x, rosbag_y]])
+
+        # If it's the first row, initialize the array
+        if self.rosbag_data.size == 0:
+            self.rosbag_data = new_row
+        else:
+            # Append the new row vertically
+            self.rosbag_data = np.vstack([self.rosbag_data, new_row])
+
+        self.rosbag_iteration += 1
+
+    def process_rosbag_data(self):
+        self.sliced_data = self.rosbag_data[::self.slicing_rate]
+        self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
+
+
+    def visualise_data(self):
+        visualize_thread = threading.Thread(target=self.start_visualising)
+        visualize_thread.start()
+
+    def start_visualising(self):
+
+        visualise_data = True
+
+        if visualise_data == True:
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111) 
+
+            plt.ion() 
+            plt.show()
+
+            while not rospy.is_shutdown():
+                if self.change != 0:
+                    self.change = 0
+
+                    x_data = self.sliced_data[:, 0]
+                    y_data = self.sliced_data[:, 1]
+
+                    x_rosbag = self.rosbag_data[:, 0]
+                    y_rosbag = self.rosbag_data[:, 1]
+
+                    scatter_sliced = ax.scatter(x_data, y_data, c='red', marker='o', label='Sliced Data', alpha=1)
+                    ax.scatter(x_rosbag, y_rosbag, c='red', marker='o', label='Rosbag Data', alpha=0.01)
+
+                    ax.set_xlabel('X')
+                    ax.set_ylabel('Y')
+                    ax.set_title('Scatter Plot of Sliced Data')
+
+                    cursor = mplcursors.cursor(hover=True)
+                    cursor.connect("add", lambda sel: self.on_point_select(sel, scatter_sliced))
+                    fig.canvas.mpl_connect('button_press_event', lambda event: self.on_click(event, scatter_sliced))
+                    #print(self.sliced_data)
+                    self.str_data = [" ".join(map(str, row)) for row in self.sliced_data]
+                plt.pause(1)
+                time.sleep(0.5)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         
     def start_rosbag(self):

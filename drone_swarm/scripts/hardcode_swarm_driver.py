@@ -35,16 +35,16 @@ class SwarmDriver:
         
         #inn the future make it a param
         self.drone_data = [
-            ['0','192.168.0.101', '9010', 'A'],
-            ['1','192.168.0.104', '9011', 'A'],
-            ['2','192.168.0.109', '9012', 'A'],
-            ['3','192.168.0.102', '9013', 'B'],
-            ['4','192.168.0.103', '9014', 'B'],
-            ['5','192.168.0.110', '9015', 'B'],
+            ['0','192.168.0.100', '9010', 'A'],
+            ['1','192.168.0.101', '9011', 'A'],
+            ['2','192.168.0.102', '9012', 'A'],
+            ['3','192.168.0.103', '9013', 'B'],
+            ['4','192.168.0.104', '9014', 'B'],
+            ['5','192.168.0.105', '9015', 'B'],
             ['6','192.168.0.106', '9016', 'B'],
-            ['7','192.168.0.105', '9017', 'C'],
-            ['8','192.168.0.111', '9018', 'C'],
-            ['9','192.168.0.113', '9019', 'C']
+            ['7','192.168.0.107', '9017', 'C'],
+            ['8','192.168.0.108', '9018', 'C'],
+            ['9','192.168.0.109', '9019', 'C']
         ]
 
 
@@ -263,12 +263,14 @@ class SwarmDriver:
 
         current_sequence = []
 
-        time.sleep(1)
+        time.sleep(5)
 
-        for i in range(self.drone_num):
-            for j in range(1):
+        starting = self.info[1]
+
+        for i in range(self.info[0]):
+            for j in range(20):
                 if i not in current_sequence:
-                    current_sequence.append(i)
+                    current_sequence.append(i+starting)
 
                 self.sequence_pub.publish(current_sequence)
                 time.sleep(1)
@@ -537,20 +539,6 @@ class SwarmDriver:
             rospy.logerr("Unexpected count value: {}".format(count))
             return False        
         
-
-    def sequencer(self):
-
-        current_sequence = []
-
-        time.sleep(5)
-
-        for i in range(self.drone_num):
-            for j in range(11):
-                if i not in current_sequence:
-                    current_sequence.append(i)
-
-                self.sequence_pub.publish(current_sequence)
-                time.sleep(1)
         
 
     def start(self):

@@ -121,7 +121,7 @@ class DroneNode:
         while not rospy.is_shutdown():
             self.response, _ = self.sock.recvfrom(128)
             self.response = self.response.decode(encoding='utf-8').strip()
-            #rospy.loginfo(f"Received reply from drone: {self.response}")
+            rospy.loginfo(f"Received reply from drone: {self.response}")
             if self.response != "ok" and self.response != "error":
                 if int(self.response) > 8:
                     self.current_battery = int(self.response)
